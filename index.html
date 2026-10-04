@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة إدارة حصص الاحتياط</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+        
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
+        
+        body { background-color: var(--bg); color: var(--text); line-height: 1.6; }
+        
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        
+        header { background: var(--surface); padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; border-radius: 0 0 12px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        
+        h1 { font-size: 1.5rem; color: var(--primary); font-weight: 700; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        
+        .tab { padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; cursor: pointer; font-weight: 500; white-space: nowrap; transition: 0.2s; }
+        
+        .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+        
+        .card { background: var(--surface); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+        
+        .form-group { margin-bottom: 15px; }
+        
+        label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
+        
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 1rem; }
+        
+        input:focus, select:focus { outline: 2px solid var(--primary); border-color: transparent; }
+        
+        button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 500; font-size: 1rem; transition: 0.2s; }
+        
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        
+        th, td { padding: 12px; text-align: right; border-bottom: 1px solid var(--border); font-size: 0.95rem; }
+        
+        th { background: #f1f5f9; font-weight: 700; color: var(--text-muted); }
+        
+        tr:last-child td { border-bottom: none; }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; }
+        .badge-teacher { background: #dbeafe; color: #1e40af; }
+        .badge-senior { background: #fef3c7; color: #92400e; }
+        
+        .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        
+        .stat-card { background: var(--surface); padding: 15px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .stat-card h3 { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px; }
+        .stat-card p { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        
+        .hidden { display: none !important; }
+        
+        .alert { padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9rem; }
+        .alert-danger { background: #fee2e2; color: #991b1b; }
+        .alert-success { background: #dcfce7; color: #166534; }
+        
+        @media (max-width: 600px) {
+            .grid-stats { grid-template-columns: 1fr 1fr; }
+            th, td { padding: 8px; font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>📅 منصة حصص الاحتياط</h1>
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('dashboard')">لوحة التحكم</div>
+        <div class="tab" onclick="switchTab('teachers')">إدارة المعلمين</div>
+        <div class="tab" onclick="switchTab('settings')">الإعدادات</div>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content">
+        <div class="grid-stats">
+            <div class="stat-card">
+                <h3>إجمالي المعلمين</h3>
+                <p id="stat-total">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>الغائبون اليوم</h3>
+                <p id="stat-absent">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>حصص الاحتياط الموزعة</h3>
+                <p id="stat-reserves">0</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2>توزيع احتياط اليوم</h2>
+                <div>
+                    <button class="btn-primary" onclick="autoDistribute()">توزيع تلقائي</button>
+                    <button class="btn-outline" onclick="resetDaily()">بداية يوم جديد</button>
+                </div>
+            </div>
+            <div id="alert-box"></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>المعلم الغائب</th>
+                        <th>المعلم البديل</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="reserve-table-body">
+                    <tr><td colspan="3" style="text-align: center; color: #999;">لا يوجد غياب اليوم</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Teachers Tab -->
+    <div id="teachers" class="tab-content hidden">
+        <div class="card">
+            <h2>إضافة معلم جديد</h2>
+            <form id="teacher-form" onsubmit="addTeacher(event)">
+                <div class="form-group">
+                    <label>الاسم</label>
+                    <input type="text" id="t-name" required placeholder="مثال: أحمد محمد">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>الفئة</label>
+                        <select id="t-type">
+                            <option value="معلم">معلم</option>
+                            <option value="معلم أول">معلم أول</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>النصاب الفعلي (حصص)</label>
+                        <input type="number" id="t-quota" required min="1" max="30" value="24">
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary">إضافة المعلم</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>قائمة المعلمين</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الفئة</th>
+                            <th>النصاب</th>
+                            <th>سقف الاحتياط</th>
+                            <th>الرصيد المستخدم</th>
+                            <th>غياب اليوم</th>
+                            <th>إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teachers-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn-outline" onclick="resetBalances()">تصفير الرصيد (شهري/فصلي)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings" class="tab-content hidden">
+        <div class="card">
+            <h2>الإعدادات العامة</h2>
+            <div class="form-group">
+                <label>النصاب الكامل الأسبوعي (حصة)</label>
+                <input type="number" id="s-full-quota" value="25">
+            </div>
+            <div class="form-group">
+                <label>معامل معلم أول (0.25 يعني ربع السقف)</label>
+                <input type="number" id="s-senior-factor" value="0.25" step="0.05" min="0" max="1">
+            </div>
+            <button class="btn-primary" onclick="saveSettings()">حفظ الإعدادات</button>
+            <div id="settings-alert" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- State & LocalStorage ---
+    let state = {
+        teachers: [],
+        reserves: [], // { absentId, substituteId }
+        settings: { fullQuota: 25, seniorFactor: 0.25 },
+        isDailyReset: false
+    };
+
+    function loadState() {
+        const saved = localStorage.getItem('reserveAppState');
+        if (saved) {
+            state = JSON.parse(saved);
+        } else {
+            // Demo data for first time
+            state.teachers = [
+                { id: 1, name: 'أحمد محمد', type: 'معلم', quota: 24, balance: 0, isAbsent: false },
+                { id: 2, name: 'سعيد علي', type: 'معلم أول', quota: 16, balance: 0, isAbsent: false },
+                { id: 3, name: 'خالد يوسف', type: 'معلم', quota: 22, balance: 0, isAbsent: false }
+            ];
+            saveState();
+        }
+        renderAll();
+    }
+
+    function saveState() {
+        localStorage.setItem('reserveAppState', JSON.stringify(state));
+        renderAll();
+    }
+
+    // --- Core Logic: Quota Calculation ---
+    function calculateLimit(teacher) {
+        const factor = teacher.type === 'معلم أول' ? state.settings.seniorFactor : 1.0;
+        const diff = state.settings.fullQuota - teacher.quota;
+        return Math.max(0, Math.round(diff * factor));
+    }
+
+    // --- Rendering ---
+    function renderAll() {
+        renderStats();
+        renderTeachers();
+        renderReserves();
+        updateSettingsUI();
+    }
+
+    function renderStats() {
+        document.getElementById('stat-total').innerText = state.teachers.length;
+        const absentCount = state.teachers.filter(t => t.isAbsent).length;
+        document.getElementById('stat-absent').innerText = absentCount;
+        document.getElementById('stat-reserves').innerText = state.reserves.filter(r => r.substituteId !== null).length;
+    }
+
+    function renderTeachers() {
+        const tbody = document.getElementById('teachers-table-body');
+        tbody.innerHTML = '';
+        
+        state.teachers.forEach(t => {
+            const limit = calculateLimit(t);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${t.name}</td>
+                <td><span class="badge ${t.type === 'معلم أول' ? 'badge-senior' : 'badge-teacher'}">${t.type}</span></td>
+                <td>${t.quota}</td>
+                <td>${limit}</td>
+                <td><strong>${t.balance}</strong></td>
+                <td>
+                    <input type="checkbox" ${t.isAbsent ? 'checked' : ''} onchange="toggleAbsence(${t.id})">
+                </td>
+                <td>
+                    <button class="btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" onclick="deleteTeacher(${t.id})">حذف</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function renderReserves() {
+        const tbody = document.getElementById('reserve-table-body');
+        tbody.innerHTML = '';
+        
+        const absentTeachers = state.teachers.filter(t => t.isAbsent);
+        
+        if (absentTeachers.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">لا يوجد غياب اليوم</td></tr>';
+            return;
+        }
+
+        absentTeachers.forEach(abs => {
+            // Find if we already have an assignment for this absent teacher
+            let assignment = state.reserves.find(r => r.absentId === abs.id);
+            
+            const tr = document.createElement('tr');
+            
+            let subName = 'لم يوزع بعد';
+            let subSelect = '<span style="color: #999;">انتظر التوزيع</span>';
+            
+            if (assignment) {
+                if (assignment.substituteId === null) {
+                    subName = 'لا يوجد بديل';
+                    subSelect = `<span style="color: var(--danger); font-weight: bold;">لا يوجد بديل متاح</span>`;
+                } else {
+                    const sub = state.teachers.find(t => t.id === assignment.substituteId);
+                    subName = sub ? sub.name : 'غير معروف';
+                    
+                    // Manual override select
+                    subSelect = `
+                        <select onchange="manualOverride(${abs.id}, this.value)">
+                            ${state.teachers.filter(t => !t.isAbsent).map(t => `
+                                <option value="${t.id}" ${t.id === assignment.substituteId ? 'selected' : ''}>
+                                    ${t.name} (${t.balance}/${calculateLimit(t)})
+                                </option>
+                            `).join('')}
+                        </select>
+                    `;
+                }
+            }
+            
+            tr.innerHTML = `
+                <td>${abs.name}</td>
+                <td>${subName}</td>
+                <td>${subSelect}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateSettingsUI() {
+        document.getElementById('s-full-quota').value = state.settings.fullQuota;
+        document.getElementById('s-senior-factor').value = state.settings.seniorFactor;
+    }
+
+    // --- Actions ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.getElementById(tabId).classList.remove('hidden');
+        
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function addTeacher(e) {
+        e.preventDefault();
+        const name = document.getElementById('t-name').value;
+        const type = document.getElementById('t-type').value;
+        const quota = parseInt(document.getElementById('t-quota').value);
+        
+        const newTeacher = {
+            id: Date.now(),
+            name: name,
+            type: type,
+            quota: quota,
+            balance: 0,
+            isAbsent: false
+        };
+        
+        state.teachers.push(newTeacher);
+        saveState();
+        document.getElementById('teacher-form').reset();
+        document.getElementById('t-quota').value = 24; // Reset to default
+    }
+
+    function deleteTeacher(id) {
+        if (!confirm('هل أنت متأكد من حذف هذا المعلم؟')) return;
+        state.teachers = state.teachers.filter(t => t.id !== id);
+        // Also remove any reserves associated with this teacher
+        state.reserves = state.reserves.filter(r => r.absentId !== id && r.substituteId !== id);
+        saveState();
+    }
+
+    function toggleAbsence(id) {
+        const teacher = state.teachers.find(t => t.id === id);
+        if (teacher) {
+            teacher.isAbsent = !teacher.isAbsent;
+            // Remove old reserve assignment if teacher becomes present
+            if (!teacher.isAbsent) {
+                const oldAssign = state.reserves.find(r => r.absentId === id);
+                if (oldAssign && oldAssign.substituteId) {
+                    // Give back the balance to the substitute
+                    const sub = state.teachers.find(t => t.id === oldAssign.substituteId);
+                    if (sub) sub.balance = Math.max(0, sub.balance - 1);
+                }
+                state.reserves = state.reserves.filter(r => r.absentId !== id);
+            }
+            saveState();
+        }
+    }
+
+    function autoDistribute() {
+        const absentTeachers = state.teachers.filter(t => t.isAbsent);
+        if (absentTeachers.length === 0) {
+            showAlert('لا يوجد معلمون غائبون لتوزيع الاحتياط عليهم.', 'danger');
+            return;
+        }
+
+        // Clear previous reserves for these absent teachers to redistribute fresh
+        state.reserves = state.reserves.filter(r => !absentTeachers.some(abs => abs.id === r.absentId));
+        
+        let successCount = 0;
+        let failCount = 0;
+
+        absentTeachers.forEach(abs => {
+            // 1. Filter eligible teachers
+            let eligible = state.teachers.filter(t => 
+                !t.isAbsent && 
+                t.balance < calculateLimit(t) &&
+                // Daily limit logic (we don't track exact period, so we just check if they already have a reserve today)
+                // For simplicity, we just check total balance vs limit, and if they are already assigned in this batch
+                !state.reserves.some(r => r.substituteId === t.id)
+            );
+
+            // 2. Sort by lowest balance relative to limit
+            eligible.sort((a, b) => {
+                const ratioA = a.balance / (calculateLimit(a) || 1);
+                const ratioB = b.balance / (calculateLimit(b) || 1);
+                return ratioA - ratioB;
+            });
+
+            // 3. Assign
+            if (eligible.length > 0) {
+                const chosen = eligible[0];
+                chosen.balance += 1;
+                state.reserves.push({ absentId: abs.id, substituteId: chosen.id });
+                successCount++;
+            } else {
+                state.reserves.push({ absentId: abs.id, substituteId: null });
+                failCount++;
+            }
+        });
+
+        saveState();
+        
+        if (failCount > 0) {
+            showAlert(`تم توزيع ${successCount} حصة. لم يتم العثور على بديل لـ ${failCount} معلم.`, 'danger');
+        } else {
+            showAlert('تم التوزيع التلقائي بنجاح.', 'success');
+        }
+    }
+
+    function manualOverride(absentId, newSubId) {
+        newSubId = parseInt(newSubId);
+        const oldAssign = state.reserves.find(r => r.absentId === absentId);
+        
+        if (oldAssign && oldAssign.substituteId) {
+            // Decrease old sub balance
+            const oldSub = state.teachers.find(t => t.id === oldAssign.substituteId);
+            if (oldSub) oldSub.balance = Math.max(0, oldSub.balance - 1);
+        }
+        
+        // Increase new sub balance
+        const newSub = state.teachers.find(t => t.id === newSubId);
+        if (newSub) {
+            if (newSub.balance >= calculateLimit(newSub)) {
+                if (!confirm('تحذير: هذا المعلم تجاوز سقف الاحتياط الخاص به. هل تريد المتابعة؟')) {
+                    // Revert selection in UI
+                    renderReserves(); 
+                    return;
+                }
+            }
+            newSub.balance += 1;
+        }
+        
+        if (oldAssign) {
+            oldAssign.substituteId = newSubId;
+        } else {
+            state.reserves.push({ absentId: absentId, substituteId: newSubId });
+        }
+        
+        saveState();
+    }
+
+    function resetBalances() {
+        if (!confirm('هل أنت متأكد من تصفير رصيد جميع المعلمين؟ سيتم حذف كل التوزيعات الحالية.')) return;
+        state.teachers.forEach(t => t.balance = 0);
+        state.reserves = [];
+        saveState();
+        showAlert('تم تصفير الرصيد لجميع المعلمين.', 'success');
+    }
+
+    function resetDaily() {
+        if (!confirm('هل تريد بداية يوم جديد؟ سيتم إلغاء تحديد الغياب لجميع المعلمين.')) return;
+        state.teachers.forEach(t => t.isAbsent = false);
+        state.reserves = [];
+        saveState();
+        showAlert('تم بداية يوم جديد.', 'success');
+    }
+
+    function saveSettings() {
+        const full = parseInt(document.getElementById('s-full-quota').value);
+        const factor = parseFloat(document.getElementById('s-senior-factor').value);
+        
+        if (full < 1 || factor < 0 || factor > 1) {
+            document.getElementById('settings-alert').innerHTML = '<div class="alert alert-danger">قيم غير صحيحة. تأكد من النصاب والمعامل.</div>';
+            return;
+        }
+        
+        state.settings.fullQuota = full;
+        state.settings.seniorFactor = factor;
+        saveState();
+        
+        document.getElementById('settings-alert').innerHTML = '<div class="alert alert-success">تم حفظ الإعدادات بنجاح.</div>';
+        setTimeout(() => document.getElementById('settings-alert').innerHTML = '', 3000);
+    }
+
+    function showAlert(msg, type) {
+        const box = document.getElementById('alert-box');
+        box.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+        setTimeout(() => box.innerHTML = '', 5000);
+    }
+
+    // Initialize
+    window.onload = loadState;
+
+</script>
+</body>
+</html>
