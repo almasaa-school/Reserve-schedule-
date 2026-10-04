@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة المسعى - إدارة حصص الاحتياط</title>
+    <title>منصة المسعى | إدارة حصص الاحتياط</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts (Cairo & Tajawal) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS for Excel -->
@@ -17,77 +17,115 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #f3f4f6; }
-        .sidebar { transition: all 0.3s; }
-        .sidebar-link:hover, .sidebar-link.active { background-color: #e0e7ff; color: #4338ca; border-right: 4px solid #4338ca; }
-        .card { transition: transform 0.2s; }
-        .card:hover { transform: translateY(-2px); }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        h1, h2, h3, h4 { font-family: 'Cairo', sans-serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+
+        /* Sidebar Styling */
+        .sidebar { background: linear-gradient(180deg, #1e1b4b 0%, #312e81 100%); box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+        .sidebar-link { transition: all 0.3s ease; border-right: 4px solid transparent; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(255, 255, 255, 0.1); border-right-color: #fbbf24; color: #fbbf24; padding-right: 1.5rem; }
+        
+        /* Card Styling */
+        .stat-card { transition: all 0.3s ease; border-radius: 1rem; border: 1px solid #e2e8f0; background: #fff; }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .stat-icon { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: 1rem; font-size: 1.75rem; }
+        
+        /* Tab Content Animation */
         .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; animation: fadeInUp 0.4s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Modal Styling */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 50; justify-content: center; align-items: center; }
+        .modal.active { display: flex; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 50; justify-content: center; align-items: center; }
-        .modal.active { display: flex; }
-        .badge-teacher { background: #dbeafe; color: #1e40af; }
+
+        /* Badges */
+        .badge-teacher { background: #e0e7ff; color: #3730a3; }
         .badge-senior { background: #fef3c7; color: #92400e; }
-        .alert-danger { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
-        .alert-success { background: #dcfce7; color: #166534; border: 1px solid #4ade80; }
-        .alert-warning { background: #fefce8; color: #854d0e; border: 1px solid #facc15; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #4338ca; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Alerts */
+        .alert-danger { background: #fef2f2; color: #991b1b; border-right: 4px solid #ef4444; }
+        .alert-success { background: #f0fdf4; color: #166534; border-right: 4px solid #22c55e; }
+        .alert-warning { background: #fefce8; color: #854d0e; border-right: 4px solid #eab308; }
+
+        /* Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+            .sidebar { display: none; }
+            main { margin: 0; padding: 0; }
+        }
     </style>
 </head>
 <body>
 
-<!-- Sidebar -->
 <div class="flex h-screen overflow-hidden">
-    <aside class="sidebar w-64 bg-white shadow-lg hidden md:flex flex-col">
-        <div class="p-4 flex items-center justify-center border-b">
-            <i class="fas fa-chalkboard-teacher text-3xl text-indigo-600 mr-2"></i>
-            <h1 class="text-xl font-bold text-gray-800">منصة المسعى</h1>
+    <!-- Sidebar -->
+    <aside class="sidebar w-72 text-white flex-col hidden md:flex relative z-20">
+        <div class="p-6 flex flex-col items-center border-b border-indigo-900">
+            <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4 shadow-lg border-4 border-amber-400">
+                <i class="fas fa-chalkboard-teacher text-4xl text-indigo-800"></i>
+            </div>
+            <h1 class="text-2xl font-black text-amber-400">منصة المسعى</h1>
+            <p class="text-sm text-indigo-200 mt-1 font-bold">مدرسة المسعى</p>
+            <p class="text-xs text-indigo-300 mt-1">نظام إدارة حصص الاحتياط</p>
         </div>
-        <nav class="flex-1 p-4 space-y-2">
-            <a href="#" onclick="switchTab('dashboard')" class="sidebar-link active flex items-center p-3 rounded-lg text-gray-700">
-                <i class="fas fa-home w-6"></i> لوحة التحكم
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <a href="#" onclick="switchTab('dashboard')" class="sidebar-link active flex items-center p-4 rounded-lg text-indigo-100 font-bold">
+                <i class="fas fa-home w-8 text-lg"></i> لوحة التحكم
             </a>
-            <a href="#" onclick="switchTab('teachers')" class="sidebar-link flex items-center p-3 rounded-lg text-gray-700">
-                <i class="fas fa-users w-6"></i> إدارة المعلمين
+            <a href="#" onclick="switchTab('teachers')" class="sidebar-link flex items-center p-4 rounded-lg text-indigo-100 font-bold">
+                <i class="fas fa-users w-8 text-lg"></i> إدارة المعلمين
             </a>
-            <a href="#" onclick="switchTab('schedule')" class="sidebar-link flex items-center p-3 rounded-lg text-gray-700">
-                <i class="fas fa-calendar-alt w-6"></i> جدول الاحتياط
+            <a href="#" onclick="switchTab('schedule')" class="sidebar-link flex items-center p-4 rounded-lg text-indigo-100 font-bold">
+                <i class="fas fa-calendar-alt w-8 text-lg"></i> جدول الاحتياط
             </a>
-            <a href="#" onclick="switchTab('reports')" class="sidebar-link flex items-center p-3 rounded-lg text-gray-700">
-                <i class="fas fa-chart-bar w-6"></i> التقارير والأرصدة
+            <a href="#" onclick="switchTab('reports')" class="sidebar-link flex items-center p-4 rounded-lg text-indigo-100 font-bold">
+                <i class="fas fa-chart-bar w-8 text-lg"></i> التقارير والأرصدة
             </a>
-            <a href="#" onclick="switchTab('settings')" class="sidebar-link flex items-center p-3 rounded-lg text-gray-700">
-                <i class="fas fa-cog w-6"></i> الإعدادات
+            <a href="#" onclick="switchTab('settings')" class="sidebar-link flex items-center p-4 rounded-lg text-indigo-100 font-bold">
+                <i class="fas fa-cog w-8 text-lg"></i> الإعدادات
             </a>
         </nav>
-        <div class="p-4 border-t text-sm text-gray-500 text-center">
-            &copy; 2026 منصة المسعى
+        <div class="p-4 border-t border-indigo-900 text-center text-xs text-indigo-300">
+            &copy; 2026 منصة المسعى. جميع الحقوق محفوظة.
         </div>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-y-auto">
-        <!-- Topbar -->
-        <header class="bg-white shadow-sm p-4 flex justify-between items-center md:hidden">
-            <h1 class="text-lg font-bold text-indigo-600">منصة المسعى</h1>
-            <button onclick="toggleSidebar()" class="text-gray-600"><i class="fas fa-bars text-xl"></i></button>
+    <main class="flex-1 flex flex-col overflow-y-auto bg-gray-50 relative">
+        <!-- Mobile Topbar -->
+        <header class="bg-indigo-900 text-white p-4 flex justify-between items-center md:hidden shadow-md z-10">
+            <div class="flex items-center">
+                <i class="fas fa-chalkboard-teacher text-2xl text-amber-400 mr-3"></i>
+                <div>
+                    <h1 class="text-lg font-bold text-amber-400">منصة المسعى</h1>
+                    <p class="text-xs text-indigo-200">مدرسة المسعى</p>
+                </div>
+            </div>
+            <button onclick="toggleSidebar()" class="text-white text-2xl"><i class="fas fa-bars"></i></button>
         </header>
         
         <!-- Mobile Sidebar (Hidden by default) -->
-        <div id="mobileSidebar" class="hidden fixed inset-0 z-40 bg-gray-800 bg-opacity-75 md:hidden" onclick="toggleSidebar()">
-            <div class="w-64 h-full bg-white p-4" onclick="event.stopPropagation()">
-                <div class="flex justify-between items-center mb-6">
-                    <h1 class="text-xl font-bold text-indigo-600">القائمة</h1>
-                    <button onclick="toggleSidebar()" class="text-gray-600"><i class="fas fa-times text-xl"></i></button>
+        <div id="mobileSidebar" class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-80 backdrop-blur-sm md:hidden" onclick="toggleSidebar()">
+            <div class="w-72 h-full bg-indigo-950 text-white p-6 shadow-2xl" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center mb-8 border-b border-indigo-800 pb-4">
+                    <h1 class="text-xl font-bold text-amber-400">القائمة الرئيسية</h1>
+                    <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white"><i class="fas fa-times text-2xl"></i></button>
                 </div>
-                <nav class="space-y-2">
-                    <a href="#" onclick="switchTab('dashboard'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-gray-700 hover:bg-indigo-50"><i class="fas fa-home w-6"></i> لوحة التحكم</a>
-                    <a href="#" onclick="switchTab('teachers'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-gray-700 hover:bg-indigo-50"><i class="fas fa-users w-6"></i> إدارة المعلمين</a>
-                    <a href="#" onclick="switchTab('schedule'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-gray-700 hover:bg-indigo-50"><i class="fas fa-calendar-alt w-6"></i> جدول الاحتياط</a>
-                    <a href="#" onclick="switchTab('reports'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-gray-700 hover:bg-indigo-50"><i class="fas fa-chart-bar w-6"></i> التقارير</a>
-                    <a href="#" onclick="switchTab('settings'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-gray-700 hover:bg-indigo-50"><i class="fas fa-cog w-6"></i> الإعدادات</a>
+                <nav class="space-y-3">
+                    <a href="#" onclick="switchTab('dashboard'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-indigo-100 hover:bg-indigo-800 transition"><i class="fas fa-home w-8"></i> لوحة التحكم</a>
+                    <a href="#" onclick="switchTab('teachers'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-indigo-100 hover:bg-indigo-800 transition"><i class="fas fa-users w-8"></i> إدارة المعلمين</a>
+                    <a href="#" onclick="switchTab('schedule'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-indigo-100 hover:bg-indigo-800 transition"><i class="fas fa-calendar-alt w-8"></i> جدول الاحتياط</a>
+                    <a href="#" onclick="switchTab('reports'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-indigo-100 hover:bg-indigo-800 transition"><i class="fas fa-chart-bar w-8"></i> التقارير</a>
+                    <a href="#" onclick="switchTab('settings'); toggleSidebar()" class="flex items-center p-3 rounded-lg text-indigo-100 hover:bg-indigo-800 transition"><i class="fas fa-cog w-8"></i> الإعدادات</a>
                 </nav>
             </div>
         </div>
@@ -95,48 +133,57 @@
         <div class="p-4 md:p-8 flex-1">
             <!-- Dashboard Tab -->
             <div id="dashboard" class="tab-content active">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">لوحة التحكم</h2>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                    <div class="card bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                        <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4"><i class="fas fa-users text-xl"></i></div>
-                        <div><p class="text-gray-500 text-sm">إجمالي المعلمين</p><p id="stat-total" class="text-2xl font-bold">0</p></div>
-                    </div>
-                    <div class="card bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                        <div class="p-3 rounded-full bg-red-100 text-red-600 mr-4"><i class="fas fa-user-slash text-xl"></i></div>
-                        <div><p class="text-gray-500 text-sm">الغائبون اليوم</p><p id="stat-absent" class="text-2xl font-bold">0</p></div>
-                    </div>
-                    <div class="card bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                        <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4"><i class="fas fa-check-circle text-xl"></i></div>
-                        <div><p class="text-gray-500 text-sm">حصص الاحتياط الموزعة</p><p id="stat-reserves" class="text-2xl font-bold">0</p></div>
-                    </div>
-                    <div class="card bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center">
-                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4"><i class="fas fa-clock text-xl"></i></div>
-                        <div><p class="text-gray-500 text-sm">آخر تحديث</p><p id="stat-date" class="text-sm font-bold text-gray-700">-</p></div>
+                <!-- Welcome Banner -->
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 mb-8 text-white shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-20 -mt-20"></div>
+                    <div class="absolute bottom-0 left-0 w-40 h-40 bg-white opacity-10 rounded-full -ml-10 -mb-10"></div>
+                    <div class="relative z-10">
+                        <h2 class="text-3xl md:text-4xl font-black mb-2">مرحباً بك في منصة المسعى</h2>
+                        <p class="text-indigo-100 text-lg">نظام ذكي لإدارة وتوزيع حصص الاحتياط في مدرسة المسعى.</p>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold text-gray-800">توزيع احتياط اليوم</h3>
-                        <div class="space-x-2">
-                            <button onclick="autoDistribute()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"><i class="fas fa-magic ml-1"></i> توزيع تلقائي</button>
-                            <button onclick="resetDaily()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition"><i class="fas fa-redo ml-1"></i> يوم جديد</button>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="stat-card p-6 flex items-center">
+                        <div class="stat-icon bg-blue-100 text-blue-600 ml-4"><i class="fas fa-users"></i></div>
+                        <div><p class="text-gray-500 text-sm font-bold mb-1">إجمالي المعلمين</p><p id="stat-total" class="text-3xl font-black text-gray-800">0</p></div>
+                    </div>
+                    <div class="stat-card p-6 flex items-center">
+                        <div class="stat-icon bg-red-100 text-red-600 ml-4"><i class="fas fa-user-slash"></i></div>
+                        <div><p class="text-gray-500 text-sm font-bold mb-1">الغائبون اليوم</p><p id="stat-absent" class="text-3xl font-black text-red-600">0</p></div>
+                    </div>
+                    <div class="stat-card p-6 flex items-center">
+                        <div class="stat-icon bg-green-100 text-green-600 ml-4"><i class="fas fa-check-circle"></i></div>
+                        <div><p class="text-gray-500 text-sm font-bold mb-1">حصص الاحتياط الموزعة</p><p id="stat-reserves" class="text-3xl font-black text-green-600">0</p></div>
+                    </div>
+                    <div class="stat-card p-6 flex items-center">
+                        <div class="stat-icon bg-amber-100 text-amber-600 ml-4"><i class="fas fa-clock"></i></div>
+                        <div><p class="text-gray-500 text-sm font-bold mb-1">آخر تحديث</p><p id="stat-date" class="text-lg font-bold text-gray-700">-</p></div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 mb-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 class="text-2xl font-black text-gray-800 flex items-center"><i class="fas fa-calendar-check text-indigo-600 ml-3"></i> توزيع احتياط اليوم</h3>
+                        <div class="flex space-x-3 space-x-reverse w-full md:w-auto">
+                            <button onclick="autoDistribute()" class="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold text-lg transition shadow-md hover:shadow-lg flex items-center justify-center"><i class="fas fa-magic ml-2"></i> توزيع تلقائي</button>
+                            <button onclick="resetDaily()" class="flex-1 md:flex-none bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-bold text-lg transition flex items-center justify-center"><i class="fas fa-redo ml-2"></i> يوم جديد</button>
                         </div>
                     </div>
                     <div id="alert-box"></div>
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto rounded-xl border border-gray-200">
                         <table class="w-full text-right">
-                            <thead class="bg-gray-50 text-gray-600 text-sm">
+                            <thead class="bg-gray-50 text-gray-600 text-sm font-bold">
                                 <tr>
-                                    <th class="p-3">المعلم الغائب</th>
-                                    <th class="p-3">المادة</th>
-                                    <th class="p-3">المعلم البديل</th>
-                                    <th class="p-3">الحصة</th>
-                                    <th class="p-3">إجراء</th>
+                                    <th class="p-4">المعلم الغائب</th>
+                                    <th class="p-4">المادة</th>
+                                    <th class="p-4">المعلم البديل</th>
+                                    <th class="p-4">الحصة</th>
+                                    <th class="p-4">إجراء</th>
                                 </tr>
                             </thead>
                             <tbody id="reserve-table-body" class="divide-y divide-gray-100">
-                                <tr><td colspan="5" class="p-4 text-center text-gray-400">لا يوجد غياب اليوم</td></tr>
+                                <tr><td colspan="5" class="p-8 text-center text-gray-400 text-lg">لا يوجد غياب اليوم</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -145,36 +192,36 @@
 
             <!-- Teachers Tab -->
             <div id="teachers" class="tab-content">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">إدارة المعلمين</h2>
-                    <div class="space-x-2">
-                        <label class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer">
-                            <i class="fas fa-file-excel ml-1"></i> استيراد Excel
-                            <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelUpload(event)">
-                        </label>
-                        <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"><i class="fas fa-plus ml-1"></i> إضافة معلم</button>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                    <h2 class="text-3xl font-black text-gray-800">إدارة المعلمين</h2>
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="openBatchModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-md hover:shadow-lg flex items-center"><i class="fas fa-paste ml-2"></i> استيراد جماعي (نسخ/لصق)</button>
+                        <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold transition shadow-md hover:shadow-lg flex items-center"><i class="fas fa-plus ml-2"></i> إضافة معلم جديد</button>
                     </div>
                 </div>
                 
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-                    <input type="text" id="searchTeacher" onkeyup="filterTeachers()" placeholder="بحث عن معلم..." class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <div class="relative">
+                        <i class="fas fa-search absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="searchTeacher" onkeyup="filterTeachers()" placeholder="ابحث عن معلم بالاسم أو المادة..." class="w-full p-4 pr-12 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg transition">
+                    </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-right">
-                            <thead class="bg-gray-50 text-gray-600 text-sm">
+                            <thead class="bg-indigo-50 text-indigo-900 text-sm font-bold border-b border-indigo-100">
                                 <tr>
-                                    <th class="p-3">الاسم</th>
-                                    <th class="p-3">المادة</th>
-                                    <th class="p-3">النصاب</th>
-                                    <th class="p-3">سقف الاحتياط</th>
-                                    <th class="p-3">الرصيد</th>
-                                    <th class="p-3">الحالة</th>
-                                    <th class="p-3">إجراءات</th>
+                                    <th class="p-4">الاسم</th>
+                                    <th class="p-4">المادة</th>
+                                    <th class="p-4">النصاب</th>
+                                    <th class="p-4">سقف الاحتياط</th>
+                                    <th class="p-4">الرصيد</th>
+                                    <th class="p-4">الحالة</th>
+                                    <th class="p-4">إجراءات</th>
                                 </tr>
                             </thead>
-                            <tbody id="teachers-table-body" class="divide-y divide-gray-100 text-sm">
+                            <tbody id="teachers-table-body" class="divide-y divide-gray-100 text-base">
                                 <!-- Populated by JS -->
                             </tbody>
                         </table>
@@ -184,16 +231,16 @@
 
             <!-- Schedule Tab -->
             <div id="schedule" class="tab-content">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">جدول الاحتياط اليومي</h2>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <div>
-                            <label class="text-sm text-gray-600 ml-2">تاريخ اليوم:</label>
-                            <input type="date" id="scheduleDate" class="border rounded-lg p-1 text-sm" onchange="renderSchedule()">
+                <h2 class="text-3xl font-black text-gray-800 mb-8">جدول الاحتياط اليومي</h2>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <div class="flex items-center bg-gray-50 p-2 rounded-xl border border-gray-200">
+                            <label class="text-sm font-bold text-gray-600 ml-3"><i class="fas fa-calendar-day text-indigo-500 ml-1"></i> تاريخ اليوم:</label>
+                            <input type="date" id="scheduleDate" class="border-none bg-transparent font-bold text-gray-800 focus:outline-none" onchange="renderSchedule()">
                         </div>
-                        <div class="space-x-2">
-                            <button onclick="exportPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"><i class="fas fa-file-pdf ml-1"></i> تصدير PDF</button>
-                            <button onclick="shareWhatsApp()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition"><i class="fab fa-whatsapp ml-1"></i> إرسال واتساب</button>
+                        <div class="flex space-x-3 space-x-reverse w-full md:w-auto">
+                            <button onclick="exportPDF()" class="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold transition shadow-md hover:shadow-lg flex items-center justify-center"><i class="fas fa-file-pdf ml-2"></i> تصدير PDF</button>
+                            <button onclick="shareWhatsApp()" class="flex-1 md:flex-none bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl font-bold transition shadow-md hover:shadow-lg flex items-center justify-center"><i class="fab fa-whatsapp ml-2"></i> إرسال واتساب</button>
                         </div>
                     </div>
                     <div id="schedule-content" class="space-y-4">
@@ -204,70 +251,70 @@
 
             <!-- Reports Tab -->
             <div id="reports" class="tab-content">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">التقارير والأرصدة</h2>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
-                        <p class="text-gray-500 text-sm mb-2">فترة الرصيد الحالية</p>
-                        <select id="balancePeriod" onchange="changePeriod()" class="w-full p-2 border rounded-lg">
+                <h2 class="text-3xl font-black text-gray-800 mb-8">التقارير والأرصدة</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
+                        <p class="text-gray-500 text-sm font-bold mb-3">فترة الرصيد الحالية</p>
+                        <select id="balancePeriod" onchange="changePeriod()" class="w-full p-3 border border-gray-200 rounded-xl font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <option value="weekly">أسبوعي</option>
                             <option value="monthly" selected>شهري</option>
                             <option value="term1">الفصل الأول (سبتمبر - ديسمبر)</option>
                             <option value="term2">الفصل الثاني (يناير - مايو)</option>
                         </select>
                     </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
-                        <p class="text-gray-500 text-sm mb-2">إجمالي حصص الاحتياط</p>
-                        <p id="report-total-subs" class="text-2xl font-bold text-indigo-600">0</p>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
+                        <p class="text-gray-500 text-sm font-bold mb-3">إجمالي حصص الاحتياط</p>
+                        <p id="report-total-subs" class="text-4xl font-black text-indigo-600">0</p>
                     </div>
-                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
-                        <p class="text-gray-500 text-sm mb-2">أعلى معلم في الاحتياط</p>
-                        <p id="report-top-teacher" class="text-lg font-bold text-green-600">-</p>
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
+                        <p class="text-gray-500 text-sm font-bold mb-3">أعلى معلم في الاحتياط</p>
+                        <p id="report-top-teacher" class="text-xl font-black text-green-600">-</p>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">سجل الأرصدة</h3>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+                    <h3 class="text-2xl font-black text-gray-800 mb-6 flex items-center"><i class="fas fa-chart-line text-indigo-600 ml-3"></i> سجل الأرصدة</h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-right">
-                            <thead class="bg-gray-50 text-gray-600 text-sm">
+                            <thead class="bg-gray-50 text-gray-600 text-sm font-bold">
                                 <tr>
-                                    <th class="p-3">الاسم</th>
-                                    <th class="p-3">المادة</th>
-                                    <th class="p-3">الرصيد المستخدم</th>
-                                    <th class="p-3">السقف</th>
-                                    <th class="p-3">النسبة المئوية</th>
+                                    <th class="p-4">الاسم</th>
+                                    <th class="p-4">المادة</th>
+                                    <th class="p-4">الرصيد المستخدم</th>
+                                    <th class="p-4">السقف</th>
+                                    <th class="p-4">النسبة المئوية</th>
                                 </tr>
                             </thead>
-                            <tbody id="reports-table-body" class="divide-y divide-gray-100 text-sm">
+                            <tbody id="reports-table-body" class="divide-y divide-gray-100 text-base">
                                 <!-- Populated by JS -->
                             </tbody>
                         </table>
                     </div>
-                    <div class="mt-6 text-center">
-                        <button onclick="resetBalances()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition"><i class="fas fa-trash-restore ml-1"></i> تصفير جميع الأرصدة</button>
+                    <div class="mt-8 text-center">
+                        <button onclick="resetBalances()" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-8 py-3 rounded-xl font-bold transition"><i class="fas fa-trash-restore ml-2"></i> تصفير جميع الأرصدة</button>
                     </div>
                 </div>
             </div>
 
             <!-- Settings Tab -->
             <div id="settings" class="tab-content">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6">الإعدادات</h2>
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 max-w-2xl">
-                    <div class="space-y-4">
+                <h2 class="text-3xl font-black text-gray-800 mb-8">إعدادات النظام</h2>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 max-w-2xl">
+                    <div class="space-y-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">النصاب الكامل الأسبوعي (حصة)</label>
-                            <input type="number" id="s-full-quota" value="25" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">النصاب الكامل الأسبوعي (حصة)</label>
+                            <input type="number" id="s-full-quota" value="25" class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-bold">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">معامل معلم أول (0.25 يعني ربع السقف)</label>
-                            <input type="number" id="s-senior-factor" value="0.25" step="0.05" min="0" max="1" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">معامل معلم أول (0.25 يعني ربع السقف)</label>
+                            <input type="number" id="s-senior-factor" value="0.25" step="0.05" min="0" max="1" class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-bold">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">الحد الأقصى اليومي (معلم عادي)</label>
-                            <input type="number" id="s-daily-limit" value="2" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                            <label class="block text-sm font-bold text-gray-700 mb-2">الحد الأقصى اليومي (معلم عادي)</label>
+                            <input type="number" id="s-daily-limit" value="2" class="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-bold">
                         </div>
-                        <button onclick="saveSettings()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition">حفظ الإعدادات</button>
-                        <div id="settings-alert" class="mt-2"></div>
+                        <button onclick="saveSettings()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-black text-lg transition shadow-md hover:shadow-lg">حفظ الإعدادات</button>
+                        <div id="settings-alert" class="mt-4"></div>
                     </div>
                 </div>
             </div>
@@ -277,47 +324,67 @@
 
 <!-- Add/Edit Teacher Modal -->
 <div id="teacherModal" class="modal">
-    <div class="bg-white rounded-xl shadow-lg w-full max-w-md p-6 m-4">
-        <div class="flex justify-between items-center mb-4">
-            <h3 id="modalTitle" class="text-xl font-bold text-gray-800">إضافة معلم جديد</h3>
-            <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 m-4 transform transition-all">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 id="modalTitle" class="text-2xl font-black text-gray-800">إضافة معلم جديد</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-red-500 transition text-2xl"><i class="fas fa-times"></i></button>
         </div>
         <form id="teacherForm" onsubmit="saveTeacher(event)">
             <input type="hidden" id="edit-id">
-            <div class="space-y-4">
+            <div class="space-y-5">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">الاسم</label>
-                    <input type="text" id="t-name" required class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">الاسم</label>
+                    <input type="text" id="t-name" required class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-bold">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">المادة</label>
-                    <input type="text" id="t-subject" required class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <label class="block text-sm font-bold text-gray-700 mb-2">المادة</label>
+                    <input type="text" id="t-subject" required class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-bold">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">الفئة</label>
-                        <select id="t-type" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">الفئة</label>
+                        <select id="t-type" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-bold">
                             <option value="معلم">معلم</option>
                             <option value="معلم أول">معلم أول</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">النصاب الفعلي</label>
-                        <input type="number" id="t-quota" required min="1" max="30" value="24" class="w-full p-2 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                        <label class="block text-sm font-bold text-gray-700 mb-2">النصاب الفعلي</label>
+                        <input type="number" id="t-quota" required min="1" max="30" value="24" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-bold">
                     </div>
                 </div>
             </div>
-            <div class="mt-6 flex justify-end space-x-2">
-                <button type="button" onclick="closeModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium">إلغاء</button>
-                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium">حفظ</button>
+            <div class="mt-8 flex justify-end space-x-3 space-x-reverse">
+                <button type="button" onclick="closeModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-bold transition">إلغاء</button>
+                <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition shadow-md">حفظ البيانات</button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- Batch Import Modal -->
+<div id="batchModal" class="modal">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl p-8 m-4 transform transition-all">
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 class="text-2xl font-black text-gray-800">إضافة معلمين دفعة واحدة (نسخ ولصق)</h3>
+            <button onclick="closeBatchModal()" class="text-gray-400 hover:text-red-500 transition text-2xl"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-6 text-sm font-bold">
+            <i class="fas fa-info-circle ml-2"></i> انسخ الأسطر من ملف الإكسل أو من الرد السابق والصقها هنا. يجب أن تكون الأعمدة بالترتيب: <strong>الاسم، المادة، النصاب، الفئة</strong> (افصل بينها بفاصلة , أو مسافة).
+        </div>
+        <textarea id="batchData" rows="12" class="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm bg-gray-50" placeholder="الاسم,المادة,النصاب,الفئة
+عبدالعزيز عبدالله سيف الجهوري,غير محدد,24,معلم
+عدنان علي محمد المرزوقي,غير محدد,24,معلم"></textarea>
+        <div class="mt-8 flex justify-end space-x-3 space-x-reverse">
+            <button onclick="closeBatchModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-bold transition">إلغاء</button>
+            <button onclick="processBatchImport()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold transition shadow-md">استيراد المعلمين</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // ==========================================
-    // 1. Initial Data (Extracted from PDF)
+    // 1. Initial Data
     // ==========================================
     const initialTeachers = [
         { id: 1, name: 'يحيى عبدالله سليمان السابعي', subject: 'التربية الإسلامية', type: 'معلم', quota: 24, balance: 0, isAbsent: false, lastPeriodCount: 0 },
@@ -365,16 +432,15 @@
     // ==========================================
     let state = {
         teachers: [],
-        reserves: [], // { date, absentId, substituteId, period, day }
+        reserves: [],
         settings: { 
             fullQuota: 25, 
             seniorFactor: 0.25, 
             dailyLimit: 2,
-            period: 'monthly' // weekly, monthly, term1, term2
+            period: 'monthly'
         }
     };
 
-    // Days and Periods mapping
     const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
     const periodsMap = { 1: 'الأولى', 2: 'الثانية', 3: 'الثالثة', 4: 'الرابعة', 5: 'الخامسة', 6: 'السادسة', 7: 'السابعة', 8: 'الثامنة' };
 
@@ -382,7 +448,6 @@
         const saved = localStorage.getItem('almasaaReserveApp');
         if (saved) {
             state = JSON.parse(saved);
-            // Ensure all initial teachers are present if state was empty
             if (state.teachers.length === 0) state.teachers = initialTeachers;
         } else {
             state.teachers = initialTeachers;
@@ -405,7 +470,7 @@
     }
 
     // ==========================================
-    // 3. Core Logic: Quota & Distribution
+    // 3. Core Logic
     // ==========================================
     function calculateLimit(teacher) {
         const factor = teacher.type === 'معلم أول' ? state.settings.seniorFactor : 1.0;
@@ -414,11 +479,8 @@
     }
 
     function isConsecutive(teacherId, day, period, date) {
-        // Check if teacher has a substitution or original class in the previous period
-        // For simplicity, we just check if they had a substitution in the previous period today
         const prevPeriod = parseInt(period) - 1;
         if (prevPeriod < 1) return false;
-        
         return state.reserves.some(r => 
             r.date === date && 
             r.day === day && 
@@ -436,76 +498,52 @@
             return;
         }
 
-        // Clear previous reserves for today to redistribute fresh (only for the selected date)
         state.reserves = state.reserves.filter(r => r.date !== date);
         
         let successCount = 0;
         let failCount = 0;
-        let notifications = [];
 
         absentTeachers.forEach(abs => {
-            // Distribute for each period of the absent teacher (simplified: 1 to 8)
-            // In a real scenario, we would know exactly which periods the absent teacher has classes.
-            // For this demo, we assume the absent teacher has classes in all periods and we distribute for all.
-            // Better: just distribute for 8 periods per absent teacher.
             for (let period = 1; period <= 8; period++) {
-                // Check if there is already a substitute for this period
                 if (state.reserves.some(r => r.date === date && r.absentId === abs.id && r.period === period)) continue;
 
-                // 1. Filter eligible teachers
                 let eligible = state.teachers.filter(t => 
                     !t.isAbsent && 
                     t.balance < calculateLimit(t) &&
-                    t.id !== abs.id // Can't substitute for themselves
+                    t.id !== abs.id
                 );
 
-                // Filter out teachers who already have a substitute today in this period
                 eligible = eligible.filter(t => !state.reserves.some(r => r.date === date && r.period === period && r.substituteId === t.id));
 
-                // 2. Score and Sort
                 eligible.sort((a, b) => {
-                    // Priority 1: Lowest balance ratio
                     const ratioA = a.balance / (calculateLimit(a) || 1);
                     const ratioB = b.balance / (calculateLimit(b) || 1);
                     if (ratioA !== ratioB) return ratioA - ratioB;
 
-                    // Priority 2: Not Consecutive
                     const consA = isConsecutive(a.id, days[new Date(date).getDay()], period, date) ? 1 : 0;
                     const consB = isConsecutive(b.id, days[new Date(date).getDay()], period, date) ? 1 : 0;
                     if (consA !== consB) return consA - consB;
 
-                    // Priority 3: Last period avoidance (fewer last period substitutions is better)
                     if (period === 8 && a.lastPeriodCount !== b.lastPeriodCount) {
                         return a.lastPeriodCount - b.lastPeriodCount;
                     }
-
                     return 0;
                 });
 
-                // 3. Assign
                 if (eligible.length > 0) {
                     const chosen = eligible[0];
                     chosen.balance += 1;
                     if (period === 8) chosen.lastPeriodCount += 1;
                     
                     state.reserves.push({ 
-                        date: date, 
-                        day: days[new Date(date).getDay()], 
-                        period: period, 
-                        absentId: abs.id, 
-                        substituteId: chosen.id 
+                        date: date, day: days[new Date(date).getDay()], period: period, absentId: abs.id, substituteId: chosen.id 
                     });
                     successCount++;
                 } else {
                     state.reserves.push({ 
-                        date: date, 
-                        day: days[new Date(date).getDay()], 
-                        period: period, 
-                        absentId: abs.id, 
-                        substituteId: null 
+                        date: date, day: days[new Date(date).getDay()], period: period, absentId: abs.id, substituteId: null 
                     });
                     failCount++;
-                    notifications.push(`لا يوجد بديل للمعلم ${abs.name} في الحصة ${periodsMap[period]}`);
                 }
             }
         });
@@ -565,7 +603,7 @@
     }
 
     // ==========================================
-    // 4. Rendering Functions
+    // 4. Rendering
     // ==========================================
     function renderAll() {
         renderStats();
@@ -589,23 +627,23 @@
         state.teachers.forEach(t => {
             const limit = calculateLimit(t);
             const tr = document.createElement('tr');
-            tr.className = 'hover:bg-gray-50 transition';
+            tr.className = 'hover:bg-indigo-50 transition-colors duration-200';
             tr.innerHTML = `
-                <td class="p-3 font-medium text-gray-800">${t.name}</td>
-                <td class="p-3 text-gray-600">${t.subject}</td>
-                <td class="p-3">${t.quota}</td>
-                <td class="p-3"><span class="badge ${t.type === 'معلم أول' ? 'badge-senior' : 'badge-teacher'} px-2 py-1 rounded text-xs font-bold">${limit}</span></td>
-                <td class="p-3 font-bold text-indigo-600">${t.balance}</td>
-                <td class="p-3">
+                <td class="p-4 font-bold text-gray-800">${t.name}</td>
+                <td class="p-4 text-gray-600 font-medium">${t.subject}</td>
+                <td class="p-4 font-bold">${t.quota}</td>
+                <td class="p-4"><span class="badge ${t.type === 'معلم أول' ? 'badge-senior' : 'badge-teacher'} px-3 py-1 rounded-full text-xs font-black shadow-sm">${limit}</span></td>
+                <td class="p-4 font-black text-indigo-600 text-lg">${t.balance}</td>
+                <td class="p-4">
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" class="sr-only peer" ${t.isAbsent ? 'checked' : ''} onchange="toggleAbsence(${t.id})">
-                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
-                        <span class="ml-2 text-xs text-gray-500">${t.isAbsent ? 'غائب' : 'حاضر'}</span>
+                        <div class="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500 shadow-inner"></div>
+                        <span class="mr-3 text-sm font-bold ${t.isAbsent ? 'text-red-500' : 'text-gray-400'}">${t.isAbsent ? 'غائب' : 'حاضر'}</span>
                     </label>
                 </td>
-                <td class="p-3 space-x-2">
-                    <button onclick="openEditModal(${t.id})" class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteTeacher(${t.id})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                <td class="p-4 space-x-2 space-x-reverse">
+                    <button onclick="openEditModal(${t.id})" class="bg-blue-50 text-blue-600 hover:bg-blue-100 p-2 rounded-lg transition"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteTeacher(${t.id})" class="bg-red-50 text-red-600 hover:bg-red-100 p-2 rounded-lg transition"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -621,34 +659,33 @@
         const absentTeachers = state.teachers.filter(t => t.isAbsent);
         
         if (absentTeachers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">لا يوجد غياب اليوم</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400 text-lg font-bold">لا يوجد غياب اليوم</td></tr>';
             return;
         }
 
-        // Group by absent teacher
         absentTeachers.forEach(abs => {
             const teacherReserves = todayReserves.filter(r => r.absentId === abs.id);
             
             if (teacherReserves.length === 0) {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="p-3 font-medium">${abs.name}</td>
-                    <td class="p-3">${abs.subject}</td>
-                    <td colspan="3" class="p-3 text-gray-400 text-center">لم يتم التوزيع بعد</td>
+                    <td class="p-4 font-bold text-gray-800">${abs.name}</td>
+                    <td class="p-4 text-gray-600">${abs.subject}</td>
+                    <td colspan="3" class="p-4 text-gray-400 text-center font-bold bg-gray-50">لم يتم التوزيع بعد</td>
                 `;
                 tbody.appendChild(tr);
             } else {
                 teacherReserves.forEach(r => {
                     const tr = document.createElement('tr');
                     let subName = 'لا يوجد بديل';
-                    let subSelect = `<span class="text-red-500 font-bold">لا يوجد بديل متاح</span>`;
+                    let subSelect = `<span class="text-red-500 font-black"><i class="fas fa-exclamation-triangle ml-1"></i> لا يوجد بديل متاح</span>`;
                     
                     if (r.substituteId) {
                         const sub = state.teachers.find(t => t.id === r.substituteId);
                         subName = sub ? sub.name : 'غير معروف';
                         
                         subSelect = `
-                            <select onchange="manualOverride(${abs.id}, ${r.period}, this.value)" class="border rounded p-1 text-sm w-full max-w-xs">
+                            <select onchange="manualOverride(${abs.id}, ${r.period}, this.value)" class="border border-indigo-200 rounded-lg p-2 text-sm font-bold text-indigo-800 bg-indigo-50 w-full max-w-xs focus:ring-2 focus:ring-indigo-500">
                                 ${state.teachers.filter(t => !t.isAbsent).map(t => `
                                     <option value="${t.id}" ${t.id === r.substituteId ? 'selected' : ''}>
                                         ${t.name} (${t.balance}/${calculateLimit(t)})
@@ -659,11 +696,11 @@
                     }
                     
                     tr.innerHTML = `
-                        <td class="p-3 font-medium">${abs.name}</td>
-                        <td class="p-3">${abs.subject}</td>
-                        <td class="p-3">${subName}</td>
-                        <td class="p-3"><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-bold">الحصة ${periodsMap[r.period]}</span></td>
-                        <td class="p-3">${subSelect}</td>
+                        <td class="p-4 font-bold text-gray-800">${abs.name}</td>
+                        <td class="p-4 text-gray-600">${abs.subject}</td>
+                        <td class="p-4 font-black text-indigo-700">${subName}</td>
+                        <td class="p-4"><span class="bg-gray-200 text-gray-800 px-3 py-1 rounded-lg text-sm font-black">الحصة ${periodsMap[r.period]}</span></td>
+                        <td class="p-4">${subSelect}</td>
                     `;
                     tbody.appendChild(tr);
                 });
@@ -688,17 +725,17 @@
             totalSubs += t.balance;
 
             const tr = document.createElement('tr');
-            tr.className = 'hover:bg-gray-50';
+            tr.className = 'hover:bg-gray-50 transition-colors';
             tr.innerHTML = `
-                <td class="p-3 font-medium text-gray-800">${t.name}</td>
-                <td class="p-3 text-gray-600">${t.subject}</td>
-                <td class="p-3 font-bold text-indigo-600">${t.balance}</td>
-                <td class="p-3">${limit}</td>
-                <td class="p-3">
-                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                        <div class="bg-indigo-600 h-2.5 rounded-full" style="width: ${Math.min(percentage, 100)}%"></div>
+                <td class="p-4 font-bold text-gray-800">${t.name}</td>
+                <td class="p-4 text-gray-600 font-medium">${t.subject}</td>
+                <td class="p-4 font-black text-indigo-600 text-lg">${t.balance}</td>
+                <td class="p-4 font-bold text-gray-700">${limit}</td>
+                <td class="p-4">
+                    <div class="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full" style="width: ${Math.min(percentage, 100)}%"></div>
                     </div>
-                    <span class="text-xs text-gray-500">${percentage}%</span>
+                    <span class="text-xs font-bold text-gray-500 mt-1 block">${percentage}%</span>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -715,8 +752,13 @@
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         
-        document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
-        // Highlight the clicked link (simplified)
+        // Update active link styling
+        document.querySelectorAll('.sidebar-link').forEach(el => {
+            el.classList.remove('active');
+            if (el.getAttribute('onclick').includes(tabId)) {
+                el.classList.add('active');
+            }
+        });
     }
 
     function toggleSidebar() {
@@ -792,7 +834,7 @@
 
     function showAlert(msg, type) {
         const box = document.getElementById('alert-box');
-        box.innerHTML = `<div class="alert-${type} p-3 rounded-lg mb-4 text-sm font-medium">${msg}</div>`;
+        box.innerHTML = `<div class="alert-${type} p-4 rounded-xl mb-6 text-base font-bold shadow-sm">${msg}</div>`;
         setTimeout(() => box.innerHTML = '', 5000);
     }
 
@@ -803,52 +845,52 @@
         
         saveState();
         const alertBox = document.getElementById('settings-alert');
-        alertBox.innerHTML = '<div class="alert-success p-2 rounded text-sm">تم حفظ الإعدادات بنجاح.</div>';
+        alertBox.innerHTML = '<div class="alert-success p-4 rounded-xl text-base font-bold shadow-sm">تم حفظ الإعدادات بنجاح.</div>';
         setTimeout(() => alertBox.innerHTML = '', 3000);
     }
 
     function changePeriod() {
         const period = document.getElementById('balancePeriod').value;
         state.settings.period = period;
-        // Here we would ideally filter the balance based on date range, but for demo we just show total
         renderReports();
     }
 
     // ==========================================
     // 6. Import / Export
     // ==========================================
-    function handleExcelUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    function openBatchModal() {
+        document.getElementById('batchModal').classList.add('active');
+    }
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+    function closeBatchModal() {
+        document.getElementById('batchModal').classList.remove('active');
+    }
+
+    function processBatchImport() {
+        const text = document.getElementById('batchData').value;
+        const lines = text.split('\n');
+        let addedCount = 0;
+        
+        lines.forEach((line, index) => {
+            // Skip header row if it exists
+            if (index === 0 && (line.includes('الاسم') || line.toLowerCase().includes('name'))) return;
             
-            // Assume headers: Name, Subject, Quota, Type
-            // Skip header row
-            let addedCount = 0;
-            for (let i = 1; i < jsonData.length; i++) {
-                const row = jsonData[i];
-                if (row.length >= 3 && row[0]) {
-                    state.teachers.push({
-                        id: Date.now() + i,
-                        name: row[0],
-                        subject: row[1] || 'غير محدد',
-                        quota: parseInt(row[2]) || 24,
-                        type: row[3] || 'معلم',
-                        balance: 0, isAbsent: false, lastPeriodCount: 0
-                    });
-                    addedCount++;
-                }
+            const parts = line.split(/[,\t]+/).map(p => p.trim());
+            if (parts.length >= 3 && parts[0]) {
+                state.teachers.push({
+                    id: Date.now() + index + Math.random(),
+                    name: parts[0],
+                    subject: parts[1] || 'غير محدد',
+                    quota: parseInt(parts[2]) || 24,
+                    type: parts[3] || 'معلم',
+                    balance: 0, isAbsent: false, lastPeriodCount: 0
+                });
+                addedCount++;
             }
-            saveState();
-            alert(`تم استيراد ${addedCount} معلم بنجاح.`);
-        };
-        reader.readAsArrayBuffer(file);
+        });
+        saveState();
+        closeBatchModal();
+        alert(`تم استيراد ${addedCount} معلم بنجاح!`);
     }
 
     function exportPDF() {
@@ -860,7 +902,6 @@
         doc.setFontSize(12);
         doc.text(`التاريخ: ${document.getElementById('scheduleDate').value}`, 105, 30, { align: 'center' });
         
-        // Simple text dump for PDF
         let y = 40;
         const date = document.getElementById('scheduleDate').value;
         const todayReserves = state.reserves.filter(r => r.date === date);
@@ -881,7 +922,7 @@
         const date = document.getElementById('scheduleDate').value;
         const todayReserves = state.reserves.filter(r => r.date === date);
         
-        let text = `*جدول حصص الاحتياط*\n📅 التاريخ: ${date}\n\n`;
+        let text = `*جدول حصص الاحتياط - مدرسة المسعى*\n📅 التاريخ: ${date}\n\n`;
         
         todayReserves.forEach(r => {
             const abs = state.teachers.find(t => t.id === r.absentId);
