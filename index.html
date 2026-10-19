@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>منصة المسعى</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ===== THEMES ===== */
 :root{--bg:#f5f5f7;--surf:#fff;--txt:#1d1d1f;--pri:#0071e3;--pri2:#0058b8;--suc:#34c759;--warn:#ff9f0a;--dan:#ff3b30;--mut:#6e6e73;--line:#e3e3e8}
@@ -503,10 +503,10 @@ function pdfFoot(){return `<div style="display:flex;justify-content:space-betwee
 const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>String(c).split('/')[0]==g));
 
 /* ===== INIT ===== */
-window.onerror=(m,s,l)=>{toast('خطأ: '+m+' (سطر '+l+')','err');};
+// أخطاء "Script error." بلا رقم سطر تأتي من سكربت خارجي أو من المتصفح (مثل الترجمة التلقائية) ولا تخص المنصة؛ نتجاهل عرضها
+window.onerror=(m,s,l)=>{if(/^Script error/i.test(String(m))&&!l){console.warn('تم تجاهل خطأ خارجي:',m);return true;}toast('خطأ: '+m+' (سطر '+l+')','err');};
 try{load();clsP=currentPeriod()||1;document.documentElement.dataset.th=S.theme||'light';render();}
 catch(e){document.body.innerHTML='<div style="padding:30px;font-family:sans-serif">تعذّر تشغيل المنصة: '+e.message+'</div>';}
 </script>
 </body>
 </html>
-
