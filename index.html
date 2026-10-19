@@ -194,7 +194,8 @@ function setSub(i,v){const r=S.reserves[i],o=T(r.substituteId),n=v?T(v):null;
 function conflictOf(t,r){const c=[];
   if(t.isAbsent)c.push('المعلم غائب');
   if(busy(t,r.day,r.period))c.push(`لديه حصة أساسية (${t.schedule[r.day][r.period]}) في الحصة ${r.period}`);
-  if(S.reserves.some(x=>x!==r&&x.date==r.date&&x.period==r.period&&x.substituteId==t.id))c.push('لديه احتياط آخر في نفس الحصة');
+  const ri=r.i!==undefined?r.i:S.reserves.indexOf(r);
+  if(S.reserves.some((x,j)=>j!==ri&&x.date==r.date&&x.period==r.period&&x.substituteId==t.id))c.push('لديه احتياط آخر في نفس الحصة');
   return c;}
 function rowWarn(r){const t=T(r.substituteId),c=t?conflictOf(t,r):[];return c.length?`<span class="tag" style="background:var(--warn);color:#fff" title="${esc(c.join(' | '))}">⚠️ تعارض</span> `:'';}
 function delRes(i){const r=S.reserves[i],s=T(r.substituteId);if(s)s.balance=Math.max(0,s.balance-1);S.reserves.splice(i,1);save();render();}
