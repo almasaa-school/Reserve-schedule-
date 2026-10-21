@@ -59,36 +59,13 @@ const PAGES=[['home','🏫 الرئيسية'],['abs','🚫 الغياب'],['dist
 const THEMES={light:'🍎 فاتح',dark:'🌙 داكن',edu:'📚 تربوي أخضر',royal:'🏛️ ملكي',warm:'☀️ دافئ',board:'🧑‍🏫 السبورة',ocean:'🌊 المحيط',library:'📖 المكتبة',alert:'⏱️ الاحتياط والطوارئ'};
 
 /* ===== INITIAL DATA ===== */
-// كل مجموعة: [التخصص, أسماء...]، والاسم الذي يبدأ بـ * هو "معلم أول"
-const RAW=[
-['التربية الإسلامية','يحيى عبدالله سليمان السابعي','علي الغساني','بدر بطي راشد القاسمي','علي الشيادي','احمد محمد عبيد السعدي','سلطان ناصر سيف الربيعي','سمير خميس غابش الخميسى'],
-['اللغة العربية','ناصر الغذائي','نبيل المقيالي','عامر سليمان حميد السعيدى','شهاب العلوي','محمد عامر فاضل السعدى','ابراهيم القرني','سلطان الصالحي','ماجد سعيد على الشحى','عمر ناصر سالم المسعودي','طاهر رامس حمود القعنونى','ابراهيم مصبح كوهيه السعدي'],
-['اللغة الإنجليزية','سعيد محمد على الغذائي','حمد صالح حمدان البلوشى','احمد حميد سيف هاشل المخمرى','سيف الدين بن يونس الحاجي','طلال القادري','موسى على سليمان الغافرى','ماجد البلوشي'],
-['الرياضيات','محمد سالم على البلوشي','سعيد مبارك عبدالله البلوشي','سلطان حميد راشد الغافرى','شريف الصالحي','عمرو عبدالعالم محمد محمود','مروان العادل','محمد محمود احمد محمد','عمرو عبدالعال محمد محمود','احمد ناجي محمد عرفات','حكيم مسعود','صلاح زين السيد','وائل محسن','أميل منير'],
-['العلوم','عبدالعزيز الغداني','عبدالله الخميسي','عمار راشد صغير سعيد الصالحي','فريد المقبالي','مخلد سالم هاشل سيف العوادي','سعد السعدي','سالم محمد حمد المجيهولي'],
-['الدراسات الاجتماعية','بدر سيف خميس الغافري','ماجد سعيد هلال الحوسنى','فوزي عبدالله سعيد الصالحي','ماجد الجنبي','محمد القريني','بدر زايد سيف الصالحي'],
-['الفنون التشكيلية','محمد شاكر','*عبدالعزيز محمد صالح البلوشى'],
-['المهارات الموسيقية','هشام صالح منجود صالح'],
-['الرياضة المدرسية','ياسر صغير مبارك الرشيدى','جاسم البلوشي'],
-['تقنية المعلومات','*ناصر سعيد صالح المسعودي','حمد محمد خميس البادي'],
-['المهارات الحياتية','*عادل ناعم راشد الشيدي'],
-['الكيمياء','ناصر سيف سعيد المقيالي'],
-['الأحياء','وضاح راشد بريك الحوسنى'],
-['غير محدد','معاذ محمد سالم الجهوري','عبدالعزيز عبدالله سيف الجهوري','عدنان علي محمد المرزوقي','بدر الرشيدي']
-];
-// جدول تجريبي عشوائي ثابت (seeded) ليعمل التوزيع فور التشغيل؛ استبدله بجداولك عبر "لصق CSV"
-function demoSchedule(seed){
-  let s=seed*9301+49297;const r=()=>(s=(s*9301+49297)%233280)/233280;
-  const sch={};
-  DAYS.forEach(d=>{sch[d]={};for(let p=1;p<=8;p++){if(r()<(p==8?.15:.5))sch[d][p]=(5+Math.floor(r()*5))+'/'+(1+Math.floor(r()*9));}});
-  return sch;
-}
-function initialTeachers(){
-  let id=0;const out=[];
-  RAW.forEach(g=>g.slice(1).forEach(n=>{id++;const sr=n[0]=='*';
-    out.push({id,name:sr?n.slice(1):n,subject:g[0],type:sr?'معلم أول':'معلم',phone:'',schedule:demoSchedule(id),balance:0,isAbsent:false,exempt:false,customLimit:null});}));
-  return out;
-}
+// مصدر البيانات: ملف TimeTableData_4112.xml (70 معلماً). الصيغة: [الاسم، التخصص، معلم أول؟، الجدول]
+// الجدول: "يp=الصف" حيث ي = رقم اليوم 0..4 (الأحد..الخميس) وp = رقم الحصة
+const DATA_VER='xml-4112';
+const TD=[["عادل ناعم راشد الشيدى","المهارات الحياتية",1,"03=9/1;14=9/2;25=9/4;38=9/5;42=9/6;48=9/3"],["ماجد سعيد هلال الحوسنى","الدراسات الاجتماعية",0,"03=7/7;04=7/5;06=7/6;08=5/7;11=7/6;12=7/5;17=5/7;18=5/6;22=7/7;24=7/5;26=5/6;27=5/7;31=7/6;33=7/7;35=5/7;37=5/6;42=7/6;43=5/6;45=7/7;47=7/5"],["بدر سيف خميس الغافرى","الدراسات الاجتماعية",0,"01=6/6;03=6/1;05=6/2;06=6/3;07=6/4;12=6/5;13=6/2;15=6/4;16=6/6;18=6/3;21=6/6;22=6/4;25=6/5;27=6/1;28=6/2;31=6/6;32=6/1;35=6/3;37=6/4;38=6/5;42=6/3;43=6/5;44=6/1;46=6/2"],["فريد سيف حمد المقبالى","العلوم",0,"01=5/5;03=5/7;04=5/6;07=7/7;11=5/7;14=5/5;15=5/6;17=7/7;23=5/6;25=7/7;26=5/5;28=5/7;31=7/7;33=5/5;34=7/7;36=5/6;38=5/7;41=5/7;43=5/5;44=7/7;48=5/6"],["ابراهيم مصبح كوهيه السعدى","اللغة العربية",0,"01=8/5;03=8/5;04=8/6;05=8/4;12=8/4;13=8/5;15=8/6;24=8/6;27=8/5;28=8/4;33=8/4;35=8/6;37=8/4;38=8/5;43=8/4;44=8/6;45=8/6;47=8/5"],["ناصر محمد على الغدانى","اللغة العربية",0,"08=7/7;11=7/7;14=7/7;28=7/7;37=7/7;42=7/7"],["محمد سالم على البلوشى","الرياضيات",0,"04=7/7;15=7/7;18=7/7;27=7/7;36=7/7;38=7/7;43=7/7"],["هلال عامر هلال الجهورى","الفيزياء",0,"02=9/5;04=9/6;16=9/5;24=9/6;32=9/5;37=9/6"],["عبدالعزيز راشد سعيد الغدانى","العلوم",0,"02=6/2;03=6/4;05=6/3;08=6/1;11=6/4;12=6/2;14=6/3;17=6/1;21=6/4;22=6/1;26=6/3;27=6/2;31=6/4;33=6/1;34=6/2;38=6/3;41=6/1;42=6/2;47=6/3;48=6/4"],["عمرو احمد عامر عيد","غير محدد",0,""],["بدر سعيد محمد الرشيدى","اللغة الانجليزية",0,"02=7/4;03=7/2;05=7/1;07=7/3;13=7/3;14=7/4;15=7/2;17=7/1;18=7/4;21=7/1;24=7/4;25=7/2;26=7/1;28=7/3;31=7/3;32=7/2;33=7/4;35=7/1;36=7/3;41=7/4;42=7/2;43=7/1;47=7/3;48=7/2"],["فوزى عبدالله سعيد الصالحى","الدراسات الاجتماعية",0,"13=9/2;16=9/1;22=9/1;26=9/3;32=9/3;35=9/4;41=9/4;45=9/2"],["احمد محمد عبيد السعدى","التربية الاسلامية",0,"04=8/4;05=8/3;07=8/6;08=8/5;11=8/3;13=8/6;15=8/5;16=8/4;22=8/5;23=8/3;25=8/4;27=8/6;32=8/3;34=8/4;36=8/5;37=8/6;42=8/6;43=8/5;47=8/3;48=8/4"],["راشد علي سعيد الشحي","غير محدد",0,""],["عامر سليمان حميد السعيدى","اللغة العربية",0,"03=5/3;06=5/4;08=5/4;14=5/3;15=5/4;17=5/4;21=5/4;22=5/3;24=5/3;36=5/4;37=5/3;42=5/3;46=5/3;48=5/4"],["محمد عامر فاضل السعدى","اللغة العربية",0,"01=5/2;04=5/1;07=5/1;14=5/1;16=5/2;18=5/2;21=5/2;24=5/2;26=5/1;33=5/2;38=5/1;42=5/1;43=5/1;48=5/2"],["بدر بطى راشد القاسمى","التربية الاسلامية",0,"03=9/3;04=9/4;06=9/2;07=9/1;11=9/2;13=9/3;15=9/4;17=9/1;21=9/2;23=9/3;24=9/1;27=9/4;32=9/4;34=9/2;37=9/1;38=9/3;41=9/2;43=9/4;44=9/1;46=9/3"],["على سالم راشد الغسانى","التربية الاسلامية",0,"01=5/6;04=6/2;06=5/7;07=6/1;11=6/2;13=5/7;17=5/6;18=6/1;22=5/7;24=6/2;26=6/1;28=5/6;32=6/2;33=5/7;35=5/6;37=6/1;42=5/7;44=5/6;45=6/1;48=6/2"],["على حمد على الشيادى","التربية الاسلامية",0,"01=6/3;03=6/6;04=6/4;06=6/5;12=6/3;15=6/6;17=6/5;18=6/4;21=6/3;22=6/5;25=6/4;28=6/6;31=6/3;33=6/4;35=6/5;38=6/6;41=6/6;42=6/5;45=6/3;46=6/4"],["سعيد مبارك عبدالله البلوشى","الرياضيات",0,"05=5/7;06=6/1;11=6/1;14=6/1;18=5/7;25=5/7;26=5/7;28=6/1;32=5/7;36=5/7;38=6/1;43=6/1;44=5/7;47=6/1"],["سمير خميس غابش الخميسى","التربية الاسلامية",0,"02=5/1;03=5/2;05=5/4;06=5/3;08=5/5;11=5/3;12=5/1;13=5/2;16=5/4;17=5/5;23=5/5;24=5/1;25=5/2;26=5/3;28=5/4;31=5/2;32=5/1;34=5/3;35=5/4;37=5/5;41=5/2;44=5/1;45=5/4;47=5/3;48=5/5"],["بدر زايد سيف الصالحى","الدراسات الاجتماعية",0,"01=5/4;02=5/2;04=5/3;07=5/5;11=5/1;13=5/3;15=5/2;16=5/5;21=5/5;22=5/1;24=5/4;27=5/2;31=5/5;33=5/4;37=5/1;38=5/3;44=5/4;45=5/1;47=5/2;48=5/3"],["ناصر سعيد صالح المسعودي","تقنية المعلومات",1,"03=7/6;04=7/6;07=6/5;08=6/5;11=6/6;12=6/6;15=6/2;16=6/2;23=6/1;24=6/1;27=6/3;28=6/3;31=8/6;32=8/6;35=7/5;36=7/5;43=6/4;44=6/4;47=7/7;48=7/7"],["سلطان حميد راشد الغافرى","الرياضيات",0,"02=6/6;05=6/5;07=6/6;13=6/5;14=6/6;18=6/5;27=6/6;28=6/5;34=6/6;36=6/6;37=6/5;44=6/5;46=6/6;48=6/5"],["شهاب احمد ابراهيم العلوى","اللغة العربية",0,"01=6/1;03=6/3;04=6/1;06=6/2;08=6/2;12=6/1;16=6/3;17=6/3;18=6/2;21=6/2;23=6/3;25=6/1;26=6/2;32=6/3;33=6/2;35=6/1;36=6/3;43=6/2;44=6/3;46=6/1;48=6/1"],["ناصر سيف سعيد المقبالى","الكيمياء",0,"01=9/6;02=9/2;06=9/3;08=9/5;12=9/3;16=9/4;18=9/1;21=9/3;26=9/1;27=9/6;31=9/6;33=9/5;35=9/2;36=9/4;42=9/4;43=9/5;45=9/1;47=9/2"],["عدنان على محمد المرزوقى","اللغة العربية",0,"02=8/2;05=8/2;06=8/1;08=8/3;11=8/2;13=8/3;14=8/1;16=8/1;21=8/2;24=8/1;28=8/3;32=8/1;35=8/2;36=8/3;38=8/3;43=8/1;44=8/2;45=8/3"],["ماجد عبدالله محمد الجنيبى","الدراسات الاجتماعية",0,"01=8/2;03=8/6;04=8/5;06=8/4;07=8/3;11=8/1;12=8/6;16=8/5;17=8/3;18=8/4;21=8/5;23=8/6;24=8/4;25=8/2;27=8/1;31=8/1;33=8/2;34=8/3;37=8/5;41=8/4;44=8/1;45=8/2;46=8/3;48=8/6"],["جاسم محمد حميد البلوشى","التربية البدنية والصحية",0,"01=7/7;02=5/7;03=5/1;05=5/2;06=5/5;11=7/5;12=7/6;13=5/6;15=7/4;22=7/6;23=5/1;24=5/6;26=7/7;31=5/3;33=7/5;34=5/4;35=7/4;41=5/4;42=5/2;43=5/3;44=5/5;45=5/7"],["سعيد محمد على الغدانى","اللغة الانجليزية",0,"01=9/5;02=9/6;11=9/6;15=9/5;22=9/5;26=9/6;33=9/6;36=9/5;46=9/5;48=9/6"],["شريف فاضل ناصر الصالحى","الرياضيات",0,"01=7/4;05=7/5;06=7/5;08=7/6;12=7/4;15=7/5;17=7/6;18=7/5;21=7/4;22=7/5;25=7/6;26=7/6;27=7/4;31=7/5;32=7/6;34=7/4;38=7/4;43=7/6;45=7/5;46=7/4;47=7/6"],["حمد صالح حمدان البلوشى","اللغة الانجليزية",0,"02=5/4;04=5/4;05=5/1;06=5/2;08=5/3;11=5/4;12=5/2;14=5/2;15=5/3;17=5/1;21=5/1;25=5/3;27=5/4;28=5/2;31=5/4;32=5/3;35=5/3;36=5/1;37=5/2;41=5/1;42=5/4;45=5/3;46=5/2;47=5/1"],["ياسر صغير مبارك الرشيدى","التربية البدنية والصحية",0,"04=8/1;05=8/6;06=8/5;12=8/5;13=8/1;14=8/4;16=8/2;21=9/1;23=9/4;24=8/3;25=8/6;34=9/3;35=9/5;36=9/2;41=9/6;43=8/2;44=8/3;46=8/4"],["محمود سعيد على الشحى","التربية البدنية والصحية",0,"01=6/2;02=6/3;03=7/3;04=6/6;13=6/4;14=7/2;15=6/1;21=6/5;22=6/3;25=7/1;26=7/3;31=6/2;32=6/6;33=6/5;36=6/1;42=7/1;45=6/4;46=7/2"],["هشام صالح منجود صالح","الفنون الموسيقية",0,"01=6/5;03=5/5;07=5/2;12=5/4;14=5/7;16=5/6;18=5/3;21=7/7;23=6/2;25=7/5;27=5/1;32=6/4;34=6/1;41=6/3;46=7/6;48=6/6"],["عبدالعزيز عبدالله سيف الجهورى","التربية الاسلامية",0,"02=7/7;04=8/2;05=7/6;08=8/1;12=8/1;13=7/6;16=7/7;18=8/2;21=7/6;23=8/1;24=7/7;27=8/2;31=8/2;32=7/7;34=7/6;37=8/1;41=7/7;44=7/6;46=8/2;48=8/1"],["موسى على سليمان الغافرى","اللغة الانجليزية",0,"02=5/5;05=5/6;07=5/7;08=5/6;11=5/5;12=5/5;14=5/6;16=5/7;21=5/6;22=5/5;24=5/7;31=5/7;32=5/6;34=5/7;38=5/5;41=5/5;45=5/6;46=5/7"],["عبدالعزيز محمد صالح البلوشى","الفنون البصرية",1,"01=5/7;05=7/7;07=6/3;14=7/6;16=6/1;18=5/1;21=5/3;23=6/6;27=6/4;34=5/6;36=5/5;38=5/2;41=6/5;45=6/2;47=5/4"],["معاذ محمد سالم الجهوري","اللغة الانجليزية",0,"03=7/5;06=7/7;07=7/6;12=7/7;13=7/7;16=7/5;18=7/6;23=7/7;24=7/6;26=7/5;28=7/5;34=7/5;35=7/7;37=7/6;41=7/6;43=7/5;45=7/6;46=7/7"],["سالم محمد حمد المجيهلي","العلوم",0,"01=7/2;02=9/1;06=7/1;12=7/2;13=7/1;16=7/1;18=9/2;23=9/1;24=9/2;26=7/2;28=7/1;31=7/2;33=7/2;36=7/1;41=7/2;43=9/1;45=7/1;48=9/2"],["محمد حمدان عبدالله القريني","الدراسات الاجتماعية",0,"01=7/1;02=7/3;04=7/2;06=9/6;11=7/2;15=7/1;17=7/4;18=7/3;22=7/4;23=7/2;24=9/5;28=9/6;31=7/4;32=7/1;34=7/2;38=7/3;41=9/5;42=7/3;46=7/1;47=7/4"],["مخلد سالم هاشل سيف العوادي","العلوم",0,"02=8/3;03=8/3;07=8/2;08=8/4;11=8/4;16=8/3;17=8/2;22=8/2;23=8/2;26=8/4;27=8/3;32=8/4;34=8/2;37=8/3;41=8/3;45=8/4;47=8/4;48=8/2"],["عبدالله حمود عبدالله الخميسي","العلوم",0,"02=8/6;03=9/4;05=9/3;07=8/5;11=8/5;16=8/6;17=9/4;23=8/5;24=8/5;26=8/6;28=8/6;32=8/5;34=8/6;37=9/3;38=9/4;41=9/3;44=8/5;47=8/6"],["عمر علي هاشل السعدي","تقنية المعلومات",0,"01=5/3;02=5/3;03=7/4;04=7/4;07=7/1;08=7/1;21=7/2;22=7/2;25=5/4;26=5/4;27=5/5;28=5/5;33=5/1;34=5/1;35=5/2;36=5/2;41=5/6;42=5/6;43=7/3;44=7/3;47=5/7;48=5/7"],["سعد ضاحي بيدار السعدي","العلوم",0,"01=5/1;03=5/4;05=5/3;08=5/2;13=5/1;14=5/4;16=5/3;17=5/2;22=5/4;23=5/3;26=5/2;28=5/1;31=5/1;33=5/3;34=5/2;37=5/4;43=5/2;44=5/3;46=5/4;48=5/1"],["عمار راشد صغير سعيد الصالحي","العلوم",0,"01=8/1;02=7/6;07=7/5;14=7/5;15=8/1;16=7/6;23=7/5;25=8/1;27=7/6;28=8/1;33=8/1;35=7/6;36=7/6;38=7/5;41=7/5;42=7/5;45=8/1;48=7/6"],["سلطان سيف سالم الصالحى","اللغة العربية",0,"01=9/1;04=9/3;05=9/2;07=9/2;08=9/1;11=9/3;12=9/2;14=9/1;17=9/3;22=9/3;24=9/3;27=9/2;28=9/1;31=9/2;33=9/2;35=9/1;36=9/3;41=9/1;44=9/2;45=9/3;48=9/1"],["يحيى عبدالله سليمان السابعى","التربية الاسلامية",0,"03=9/5;07=9/6;13=9/5;15=9/6;21=9/6;27=9/5;34=9/5;38=9/6;45=9/5;47=9/6"],["ابراهيم عبدالله صالح القرنى","اللغة العربية",0,"03=7/1;06=7/3;08=7/2;11=7/3;14=7/3;17=7/2;18=7/1;24=7/1;25=7/3;27=7/2;33=7/1;35=7/3;37=7/1;38=7/2;41=7/3;44=7/1;45=7/2;47=7/2"],["ظاهر رامس حمود القعنونى","اللغة العربية",0,"03=5/6;04=5/7;05=5/5;07=5/6;11=5/6;12=5/7;13=5/5;15=5/7;18=5/5;21=5/7;23=5/7;24=5/5;25=5/6;32=5/5;33=5/6;37=5/7;38=5/6;43=5/7;45=5/5;46=5/5;47=5/6"],["عمر ناصر سالم المسعودى","اللغة العربية",0,"01=7/6;02=7/5;05=7/4;07=7/4;08=7/5;13=7/5;15=7/6;16=7/4;23=7/6;25=7/4;27=7/5;28=7/6;32=7/5;33=7/6;38=7/6;43=7/4;46=7/5;48=7/4"],["ماجد سعيد على الشحى","اللغة العربية",0,"01=9/4;04=9/5;05=9/6;08=9/6;11=9/4;13=9/4;14=9/5;16=9/6;22=9/4;23=9/5;25=9/6;26=9/5;31=9/5;33=9/4;35=9/6;37=9/4;43=9/6;44=9/5;46=9/6;47=9/4;48=9/5"],["وضاح راشد بريك الحوسنى","الاحياء",0,"01=9/2;05=9/1;07=9/5;08=9/4;11=9/1;12=9/6;14=9/3;18=9/4;21=9/4;23=9/2;28=9/5;31=9/3;32=9/2;34=9/6;36=9/1;43=9/3;45=9/6;47=9/5"],["طلال القادرى يونس عبدلى","اللغة الانجليزية",0,"01=8/6;02=8/5;04=6/5;05=6/6;06=8/6;13=6/6;14=8/5;16=6/5;17=8/5;18=8/6;22=8/6;24=6/6;26=6/5;28=8/5;32=6/5;33=8/5;34=6/5;37=6/6;38=8/6;41=8/5;43=8/6;45=6/6;46=6/5;47=6/6"],["خالد سعيد على الشحى","التربية الاسلامية",0,"01=7/5;02=7/1;05=7/2;06=7/4;08=7/3;11=7/4;12=7/1;15=7/3;17=7/5;18=7/2;21=7/5;23=7/3;24=7/2;26=7/4;27=7/1;31=7/1;32=7/4;34=7/3;35=7/2;37=7/5;41=7/1;43=7/2;45=7/4;46=7/3;48=7/5"],["نبيل سالم سليمان المقبالي","اللغة العربية",0,"01=6/4;02=6/5;03=6/5;05=6/4;06=6/6;11=6/5;12=6/4;15=6/5;17=6/6;22=6/6;24=6/4;26=6/6;27=6/5;31=6/5;33=6/6;35=6/4;36=6/4;41=6/4;42=6/6;44=6/6;45=6/5"],["ابراهيم عبيد خلف المزروعي","الفنون الموسيقية",0,"02=8/4;06=7/2;08=7/4;13=9/6;15=9/2;17=9/5;22=7/1;24=7/3;26=8/2;28=9/3;31=8/5;33=8/6;36=8/1;38=9/1;42=8/3;44=9/4"],["محمدشاكر بن بلقاسم عكروتي","الفنون البصرية",0,"02=8/1;04=7/3;06=9/5;08=8/2;11=7/1;15=9/3;17=8/6;22=9/6;26=9/4;28=7/4;31=8/4;35=8/3;37=7/2;42=9/2;44=7/5;46=9/1;48=8/5"],["احمد حميد سيف هاشل المخمري","اللغة الانجليزية",0,"02=9/4;04=9/1;07=9/3;08=9/2;12=9/1;14=9/4;16=9/3;17=9/2;24=9/4;25=9/1;27=9/3;28=9/2;32=9/1;34=9/4;35=9/3;37=9/2;42=9/1;43=9/2;46=9/4;47=9/3"],["محمد محمود احمد محمد","الرياضيات",0,"04=5/2;06=5/1;07=5/3;08=5/1;11=5/2;12=5/3;15=5/1;16=5/1;17=5/3;22=5/2;23=5/2;25=5/1;27=5/3;28=5/3;32=5/2;35=5/1;36=5/3;41=5/3;44=5/2;45=5/2;46=5/1"],["احمد ناجي محمد عرفات","الرياضيات",0,"03=9/2;04=9/2;06=9/1;08=9/3;13=9/1;15=9/1;16=9/2;18=9/3;22=9/2;25=9/3;27=9/1;31=9/1;33=9/3;38=9/2;42=9/3;44=9/3;46=9/2;47=9/1"],["عمرو عبدالعال محمد محمود","الرياضيات",0,"03=9/6;05=9/5;07=9/4;12=9/4;14=9/6;18=9/5;21=9/5;23=9/6;25=9/5;28=9/4;31=9/4;32=9/6;36=9/6;37=9/5;42=9/5;44=9/6;45=9/4;48=9/4"],["حمد محمد خميس البادي","تقنية المعلومات",0,"01=9/3;02=9/3;05=9/4;06=9/4;11=9/5;12=9/5;14=8/3;15=8/3;17=9/6;18=9/6;21=8/4;22=8/4;25=9/2;26=9/2;33=9/1;34=9/1;37=8/2;38=8/2;41=8/1;42=8/1;45=8/5;46=8/5"],["سيف الدين بن يونس  الحاجي","اللغة الانجليزية",0,"01=8/4;03=8/1;04=8/3;06=8/2;07=8/1;12=8/2;13=8/2;15=8/4;17=8/1;18=8/3;21=8/1;22=8/3;24=8/2;26=8/3;27=8/4;32=8/2;33=8/3;35=8/4;36=8/4;38=8/1;42=8/4;43=8/3;46=8/1;47=8/2"],["ماجد عبدالله أحمد البلوشي","اللغة الانجليزية",0,"02=6/1;03=6/2;05=6/1;06=6/4;08=6/3;11=6/3;13=6/1;14=6/2;16=6/4;17=6/4;21=6/1;24=6/3;25=6/2;28=6/4;31=6/1;34=6/4;35=6/2;37=6/3;38=6/2;41=6/2;42=6/1;43=6/3;46=6/3;47=6/4"],["حكيم بن مسعود اولاد دلالة","الرياضيات",0,"02=6/4;04=6/3;07=6/2;08=6/4;13=6/3;14=6/4;15=6/3;17=6/2;22=6/2;23=6/4;25=6/3;26=6/4;33=6/3;34=6/3;36=6/2;37=6/2;38=6/4;42=6/4;44=6/2;47=6/2;48=6/3"],["صلاح زين الدين السيد الغتورى","الرياضيات",0,"01=7/3;02=7/2;04=7/1;07=7/2;12=7/3;13=7/2;14=7/1;16=7/2;21=7/3;22=7/3;23=7/1;28=7/2;33=7/3;34=7/1;36=7/2;37=7/3;38=7/1;44=7/2;45=7/3;47=7/1;48=7/1"],["وائل بن محسن  منوبي","الرياضيات",0,"03=8/4;05=8/5;07=8/4;08=8/6;11=8/6;13=8/4;14=8/6;17=8/4;18=8/5;21=8/6;23=8/4;25=8/5;26=8/5;34=8/5;35=8/5;36=8/6;38=8/4;41=8/6;42=8/5;44=8/4;46=8/6"],["اميل منير صبحى سيدهم","الرياضيات",0,"01=8/3;03=8/2;05=8/1;06=8/3;12=8/3;14=8/2;15=8/2;18=8/1;21=8/3;22=8/1;25=8/3;26=8/1;28=8/2;31=8/3;34=8/1;35=8/1;36=8/2;41=8/2;42=8/2;47=8/1;48=8/3"],["مروان محمد العادل بلعج","الرياضيات",0,"02=5/6;04=5/5;06=5/6;07=5/4;12=5/6;13=5/4;15=5/5;18=5/4;22=5/6;23=5/4;25=5/5;27=5/6;31=5/6;32=5/4;34=5/5;35=5/5;38=5/4;42=5/5;43=5/4;46=5/6;47=5/5"]];
+function initialTeachers(){return TD.map((r,i)=>{const sch={};DAYS.forEach(d=>sch[d]={});
+  (r[3]||'').split(';').filter(Boolean).forEach(x=>{const[k,c]=x.split('=');sch[DAYS[+k[0]]][+k.slice(1)]=c;});
+  return{id:i+1,name:r[0],subject:r[1],type:r[2]?'معلم أول':'معلم',phone:'',schedule:sch,balance:0,isAbsent:false,exempt:false,customLimit:null};});}
 
 /* ===== STATE ===== */
 const today=()=>new Date().toISOString().slice(0,10);
@@ -96,9 +73,12 @@ let S,page='home',date=today(),q='';
 function defaults(){return{teachers:initialTeachers(),reserves:[],
   settings:{fullQuota:25,seniorFactor:0.25,dailyLimit:2,dailyLimitSenior:1,noBetween:true,noAfter3:true,balanceLast:true,noP8Senior:false,noConsec:true,maxWeekly:0,byLoad:true,knowsClass:true,sameSubject:true,spread:true,emergency:false,p8Quota:3,maxRun:0,onlyPresent:false,excludeSubjects:'',gradeFirst:false},
   theme:'light',times:{1:['08:00','08:45'],2:['09:00','09:45'],3:['10:00','10:45'],4:['11:00','11:45'],5:['12:00','12:45'],6:['13:00','13:45'],7:['14:00','14:45'],8:['15:00','15:45']},
-  school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
-function load(){try{const d=localStorage.getItem(KEY);S=d?JSON.parse(d):defaults();S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);}catch(e){S=defaults();}}
-function save(){driveQueue();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('تعذّر الحفظ في المتصفح','err');}}
+  school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],dataVer:DATA_VER,sb:{url:'',key:'',email:'',rowId:'main',auto:false,last:'',refresh:''},drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
+function load(){try{const d=localStorage.getItem(KEY);S=d?JSON.parse(d):defaults();S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);
+  // استبدال البيانات القديمة (معلمين وجداول وأرصدة واحتياط) عند تغيّر نسخة البيانات
+  if(S.dataVer!==DATA_VER){S.teachers=initialTeachers();S.reserves=[];S.absenceLog=[];S.dataVer=DATA_VER;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(x){}}
+  }catch(e){S=defaults();}}
+function save(){driveQueue();sbQueue();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('تعذّر الحفظ في المتصفح','err');}}
 
 /* ===== UTILITIES ===== */
 const $=id=>document.getElementById(id);
@@ -280,6 +260,22 @@ set(){const st=S.settings;return `<div class="card"><h3>الثيم</h3>${Object.
   أقصى عدد حصص متتالية بعد الإسناد (0 = بلا حد) <input type="number" style="width:60px" value="${st.maxRun||0}" onchange="S.settings.maxRun=+this.value;save()"><br>
   تخصصات مستثناة من الاحتياط (بفاصلة) <input value="${esc(st.excludeSubjects||'')}" onchange="S.settings.excludeSubjects=this.value;save()"><br>
   نصاب الحصة الأخيرة (8) لكل معلم <input type="number" style="width:60px" value="${st.p8Quota}" onchange="S.settings.p8Quota=+this.value;save()"><br>الحد الأسبوعي للاحتياط (0 = بلا حد) <input type="number" style="width:70px" value="${st.maxWeekly||0}" onchange="S.settings.maxWeekly=+this.value;save()"></div>
+  <div class="card"><h3>🗄️ قاعدة بيانات Supabase</h3>
+  رابط المشروع <input dir="ltr" style="width:100%" placeholder="https://xxxx.supabase.co" value="${esc(S.sb.url)}" onchange="S.sb.url=this.value.trim();save()"><br><br>
+  مفتاح anon (public) <input dir="ltr" style="width:100%" value="${esc(S.sb.key)}" onchange="S.sb.key=this.value.trim();save()"><br><br>
+  بريد الدخول (موصى به) <input dir="ltr" value="${esc(S.sb.email)}" onchange="S.sb.email=this.value.trim();save()"> اسم السجل <input dir="ltr" style="width:90px" value="${esc(S.sb.rowId)}" onchange="S.sb.rowId=this.value.trim()||'main';save()"><br>
+  <label><input type="checkbox" ${S.sb.auto?'checked':''} onchange="S.sb.auto=this.checked;save()"> حفظ تلقائي بعد كل تغيير</label><br>
+  <button class="btn g" onclick="sbLogin()">🔗 دخول وحفظ الآن</button><button class="btn o" onclick="sbLoad()">⬇️ استرجاع من Supabase</button>
+  <p style="color:var(--mut)">${S.sb.last?'آخر حفظ: '+esc(S.sb.last):'لم يُحفظ بعد'}</p>
+  <details><summary>SQL لإنشاء الجدول (انسخه في SQL Editor)</summary><pre dir="ltr" style="white-space:pre-wrap;font-size:12px">create table if not exists masaa_state (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table masaa_state enable row level security;
+create policy "staff_all" on masaa_state
+  for all to authenticated
+  using (true) with check (true);</pre><small>ثم أنشئ مستخدماً من Authentication ← Users وضع بريده هنا. آخر من يحفظ يكتب فوق السابق.</small></details></div>
   <div class="card"><h3>☁️ Google Drive</h3>Client ID <input style="width:100%" value="${esc(S.drive.clientId)}" placeholder="xxxx.apps.googleusercontent.com" onchange="S.drive.clientId=this.value.trim();save()"><br><br>
   معرّف مجلد Drive (اختياري) <input style="width:100%" value="${esc(S.drive.folderId)}" onchange="S.drive.folderId=this.value.trim();S.drive.fileId='';save()"><br>
   <label><input type="checkbox" ${S.drive.auto?'checked':''} onchange="S.drive.auto=this.checked;save()"> حفظ تلقائي بعد كل تغيير</label><br>
@@ -373,7 +369,7 @@ function expCSV(){const ta=$('csv');ta.style.display='block';
   ta.value=S.teachers.map(t=>[t.name,t.subject,t.type,t.phone,...DAYS.map(d=>Object.entries(t.schedule[d]||{}).map(([p,c])=>p+':'+c).join(' '))].join(',')).join('\n');ta.select();}
 function setTheme(k){S.theme=k;document.documentElement.dataset.th=k;save();render();}
 function expJSON(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='masaa-backup.json';a.click();}
-function impJSON(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{S=JSON.parse(r.result);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);save();setTheme(S.theme);toast('تم الاستيراد');}catch(e){toast('ملف غير صالح','err');}};r.readAsText(f);}
+function impJSON(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{S=JSON.parse(r.result);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);save();setTheme(S.theme);toast('تم الاستيراد');}catch(e){toast('ملف غير صالح','err');}};r.readAsText(f);}
 function resetAll(){if(confirm('سيتم مسح كل البيانات. متابعة؟')){localStorage.removeItem(KEY);load();setTheme('light');}}
 
 /* ===== Excel / إضافة فردية / مشاركة PDF ===== */
@@ -475,7 +471,7 @@ async function driveFind(){const r=await fetch('https://www.googleapis.com/drive
   const j=await r.json();return j.files&&j.files[0]?j.files[0].id:'';}
 async function driveSave(quiet){try{const d=S.drive;if(!d.fileId)d.fileId=await driveFind();
     const meta={name:'masaa-v3-backup.json'};if(!d.fileId&&d.folderId)meta.parents=[d.folderId];
-    const bd='b'+Date.now(),body=`--${bd}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(meta)}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(S)}\r\n--${bd}--`;
+    const bd='b'+Date.now(),body=`--${bd}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(meta)}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({...S,sb:undefined})}\r\n--${bd}--`;
     const r=await fetch('https://www.googleapis.com/upload/drive/v3/files'+(d.fileId?'/'+d.fileId:'')+'?uploadType=multipart',{method:d.fileId?'PATCH':'POST',headers:{...dH(),'Content-Type':'multipart/related; boundary='+bd},body});
     if(r.status==401){dTok=null;return quiet?toast('انتهت جلسة Drive — اربط من جديد','warn'):driveAuth(()=>driveSave(false));}
     if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();d.fileId=j.id;d.last=new Date().toLocaleString('ar');
@@ -486,7 +482,7 @@ async function driveLoad(){if(!dTok)return driveAuth(driveLoad);
     const r=await fetch(`https://www.googleapis.com/drive/v3/files/${d.fileId}?alt=media`,{headers:dH()});if(!r.ok)throw new Error('HTTP '+r.status);
     if(!confirm('سيتم استبدال بياناتك الحالية بنسخة Drive. متابعة؟'))return;
     const n=await r.json(),keep={clientId:d.clientId,fileId:d.fileId,folderId:d.folderId,auto:d.auto};
-    S=n;S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive,keep);
+    const sbk=S.sb;S=n;S.sb=Object.assign({},defaults().sb,sbk);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive,keep);
     try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}setTheme(S.theme||'light');toast('تم الاسترجاع من Drive');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
 
 /* ===== الواجهات والشعارات والاعتمادات ===== */
@@ -502,11 +498,39 @@ function pdfHead(t,sub){return `<div style="display:flex;align-items:center;just
 function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>إعداد وتصميم: ${DESIGNER}</span></div>`;}
 const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>String(c).split('/')[0]==g));
 
+/* ===== Supabase: قاعدة بيانات سحابية ===== */
+let sbTok=null,sbTimer=null,sbWarned=false;
+const sbBase=()=>S.sb.url.replace(/\/+$/,'');
+const sbH=()=>({apikey:S.sb.key,Authorization:'Bearer '+(sbTok||S.sb.key),'Content-Type':'application/json'});
+const sbReady=()=>!!sbTok||!S.sb.email;
+function sbPersist(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function sbQueue(){if(!S||!S.sb||!S.sb.auto||!S.sb.url)return;clearTimeout(sbTimer);
+  sbTimer=setTimeout(()=>{if(sbReady())sbSave(true);else if(!sbWarned){sbWarned=true;toast('Supabase: سجّل الدخول من لوحة التحكم لتفعيل الحفظ التلقائي','warn');}},3000);}
+async function sbAuth(body,grant){const r=await fetch(sbBase()+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:S.sb.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.msg||('HTTP '+r.status));sbTok=j.access_token;S.sb.refresh=j.refresh_token;sbPersist();sbWarned=false;}
+async function sbRefresh(){if(!S.sb.refresh)return false;try{await sbAuth({refresh_token:S.sb.refresh},'refresh_token');return true;}catch(e){S.sb.refresh='';sbTok=null;sbPersist();return false;}}
+async function sbBoot(){if(S.sb&&S.sb.auto&&S.sb.url&&S.sb.email&&S.sb.refresh&&!(await sbRefresh()))toast('انتهت جلسة Supabase — سجّل الدخول من لوحة التحكم','warn');}
+async function sbLogin(){const b=S.sb;if(!b.url||!b.key)return toast('أدخل رابط المشروع ومفتاح anon','err');
+  try{if(b.email){const pw=prompt('كلمة مرور '+b.email);if(!pw)return;await sbAuth({email:b.email,password:pw},'password');}await sbSave(false);}catch(e){toast('فشل الدخول: '+e.message,'err');}}
+async function sbSave(quiet,retry){try{const{sb,drive,...rest}=S; // لا نرفع مفاتيح الاتصال
+  const r=await fetch(sbBase()+'/rest/v1/masaa_state?on_conflict=id',{method:'POST',headers:{...sbH(),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:S.sb.rowId||'main',data:rest,updated_at:new Date().toISOString()})});
+  if(r.status==401&&!retry&&await sbRefresh())return sbSave(quiet,true);
+  if(!r.ok){const t=await r.text();throw new Error('HTTP '+r.status+' '+t.slice(0,120));}
+  S.sb.last=new Date().toLocaleString('ar');sbPersist();if(!quiet){toast('🗄️ تم الحفظ في Supabase');render();}}
+  catch(e){toast('فشل الحفظ في Supabase: '+e.message,'err');}}
+async function sbLoad(){if(!sbReady())return toast('سجّل الدخول أولاً (زر "دخول وحفظ")','warn');
+  try{const r=await fetch(sbBase()+'/rest/v1/masaa_state?select=data,updated_at&id=eq.'+encodeURIComponent(S.sb.rowId||'main'),{headers:sbH()});if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();if(!j.length)return toast('لا توجد نسخة محفوظة بهذا الاسم','warn');
+    if(!confirm('سيتم استبدال بياناتك الحالية بنسخة Supabase المحفوظة في '+new Date(j[0].updated_at).toLocaleString('ar')+'. متابعة؟'))return;
+    const sbk=S.sb,dk=S.drive;S=j[0].data;S.sb=sbk;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
+    sbPersist();setTheme(S.theme||'light');toast('تم الاسترجاع من Supabase');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
+
 /* ===== INIT ===== */
 // أخطاء "Script error." بلا رقم سطر تأتي من سكربت خارجي أو من المتصفح (مثل الترجمة التلقائية) ولا تخص المنصة؛ نتجاهل عرضها
 window.onerror=(m,s,l)=>{if(/^Script error/i.test(String(m))&&!l){console.warn('تم تجاهل خطأ خارجي:',m);return true;}toast('خطأ: '+m+' (سطر '+l+')','err');};
-try{load();clsP=currentPeriod()||1;document.documentElement.dataset.th=S.theme||'light';render();}
+try{load();clsP=currentPeriod()||1;document.documentElement.dataset.th=S.theme||'light';render();sbBoot();}
 catch(e){document.body.innerHTML='<div style="padding:30px;font-family:sans-serif">تعذّر تشغيل المنصة: '+e.message+'</div>';}
 </script>
 </body>
 </html>
+
