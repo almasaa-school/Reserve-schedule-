@@ -428,12 +428,12 @@ const absCount=t=>uniq(S.absenceLog.filter(x=>x.teacherId==t.id).map(x=>x.date))
 function anData(){
   const top=(f,n=5)=>S.teachers.map(t=>[t,f(t)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,n);
   const per=[1,2,3,4,5,6,7,8].map(p=>{const bs=S.teachers.reduce((a,t)=>a+DAYS.filter(d=>busy(t,d,p)).length,0);
-    return{p,base:Math.round(bs/5),free:Math.round((S.teachers.length*5-bs)/5),rs:S.reserves.filter(r=>r.period==p).length,un:S.reserves.filter(r=>r.period==p&&!r.substituteId).length};});
-  const p8=S.reserves.filter(r=>r.period==8).length,cap=S.teachers.reduce((a,t)=>a+Math.max(0,p8LimitOf(t)-p8Count(t)),0),full=S.teachers.filter(t=>p8Count(t)>=p8LimitOf(t)).length;
+    return{p,base:Math.round(bs/5),free:Math.round((S.teachers.length*5-bs)/5),rs:S.reserves.filter(r=>r.period==p).length,un:S.reserves.filter(r=>r.period==p&&!r.substituteId).length}; class="});
+  const p8=S.reserves.filter(r=>rbtn.period==8).length w,cap=S.teachers.reduce((a",t)=>a+Math.max(0,p8LimitOf onclick(t)-p8Count(t)),0),full=S.teachers.filter(t=>p8Count(t)>=p8LimitOf(t)).length;
   return{takers:top(t=>t.balance),absent:top(absCount),p8top:top(p8Count),per,p8,cap,full};}
 R.an=()=>{const d=anData(),mx=Math.max(1,...d.per.map(x=>x.rs));
   const list=(a,u)=>a.length?a.map(([t,n],i)=>`<div>${i+1}. ${esc(t.name)} <span class="tag">${n} ${u}</span></div>`).join(''):'<small>لا بيانات بعد</small>';
-  return `<div class="card"><button class="btn" onclick="statsPDF(false)">📄 تنزيل PDF</button><button class="btn w" onclick="statsPDF(true)">📎 PDF للواتساب</button></div>
+  return `<div class="card"><button class="btn" onclick="statsPDF(false)">📄 تنزيل PDF</button><button="statsPDF(true)">📎 PDF للواتساب</button></div>
   <div class="grid"><div class="stat"><b>${S.reserves.length}</b>إجمالي حصص الاحتياط</div><div class="stat"><b>${d.p8}</b>احتياط الحصة 8</div><div class="stat"><b>${d.cap}</b>سعة متبقية للحصة 8</div><div class="stat"><b>${d.full}</b>معلم بلغ نصاب الحصة 8</div></div><br>
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"><div class="card"><h4>🏆 الأكثر أخذاً للاحتياط</h4>${list(d.takers,'حصة')}</div>
   <div class="card"><h4>🚫 الأكثر غياباً</h4>${list(d.absent,'يوم')}</div><div class="card"><h4>⭐ الأكثر أخذاً للحصة 8</h4>${list(d.p8top,'حصة')}</div></div>
@@ -486,16 +486,16 @@ async function driveLoad(){if(!dTok)return driveAuth(driveLoad);
     try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}setTheme(S.theme||'light');toast('تم الاسترجاع من Drive');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
 
 /* ===== الواجهات والشعارات والاعتمادات ===== */
-const DESIGNER='أحمد بن عبدالله العلي',PRINCIPAL='الدكتور حسن بن علي البلوشي';
+const PRINCIPAL='الدكتور حسن بن علي البلوشي';
 const THICON={light:'🍎',dark:'🌙',edu:'📚',royal:'🏛️',warm:'☀️',board:'🧑‍🏫',ocean:'🌊',library:'📖',alert:'⏱️'};
 const prin=()=>S.school.principal||PRINCIPAL;
 const logoAbs=(src,side)=>src?`<img src="${src}" style="position:absolute;top:14px;${side}:16px;height:64px;max-width:90px;object-fit:contain;background:rgba(255,255,255,.92);border-radius:12px;padding:4px">`:'';
-const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())} • إعداد وتصميم: ${DESIGNER}</div>`;
+const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())}</div>`;
 function setLogo(side,f){if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,240/Math.max(im.width,im.height)),c=document.createElement('canvas');
   c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);S.school['logo'+side]=c.toDataURL('image/png');save();render();toast('تم رفع الشعار');};im.src=r.result;};r.readAsDataURL(f);}
 const pimg=s=>s?`<img src="${s}" style="height:64px;max-width:90px;object-fit:contain">`:'<div style="width:64px"></div>';
 function pdfHead(t,sub){return `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0071e3;padding-bottom:10px;margin-bottom:14px">${pimg(S.school.logoR)}<div style="text-align:center"><div style="font-size:22px;font-weight:800">${esc(S.school.name)}</div><div style="font-size:17px">${t}</div><div style="color:#555">${sub}</div></div>${pimg(S.school.logoL)}</div>`;}
-function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>إعداد وتصميم: ${DESIGNER}</span></div>`;}
+function pdfFoot(){return `<div style="text-align:center;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333">مدير المدرسة: ${esc(prin())}</div>`;}
 const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>String(c).split('/')[0]==g));
 
 /* ===== Supabase: قاعدة بيانات سحابية ===== */
