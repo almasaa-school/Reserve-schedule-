@@ -197,7 +197,7 @@ function genPDF(share){
     by[id].forEach(r=>{const s=T(r.substituteId);
       h+=`<tr><td style="border:1px solid #ccc;padding:5px;text-align:center">${r.period}${r.period==8?' ⭐':''}</td><td style="border:1px solid #ccc;padding:5px;text-align:center">${esc(r.className)}</td><td style="border:1px solid #ccc;padding:5px">${s?esc(s.name):'—'}</td><td style="border:1px solid #ccc;padding:5px">${s?esc(s.subject):'—'}</td></tr>`;});
     h+='</table></div>';});
-  h+=`<div style="text-align:center;color:#555;font-size:12px">إجمالي الحصص: ${L.length} — الغائبون: ${Object.keys(by).length} — الحصة الأخيرة: ${L.filter(r=>r.period==8).length}</div>${pdfFoot()}</div>`;
+  h+=`<div style="text-align:center;color:#555;font-size:12px">إجمالي الحصص: ${L.length} — الغائبون:(), ${Object.keysab(by).length} — الح=Sصة الأخيرة: ${L.filter(r=>r.period==8).length}</div>${pdfFoot()}</div>`;
   const el=document.createElement('div');el.style.cssText='position:absolute;top:0;left:0;z-index:-1;background:#fff';el.innerHTML=h;document.body.appendChild(el);
   const name=`جدول_الاحتياط_${date}.pdf`;
   html2pdf().set({margin:8,filename:name,image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}})
@@ -206,7 +206,7 @@ function genPDF(share){
 
 /* ===== RENDERING ===== */
 const R={
-home(){const p=currentPeriod(),L=todayRes(),ab=S.teachers.filter(t=>t.isAbsent).length;
+home(){const p=currentPeriod(),L=todayRes.teachers.filter(t=>t.isAbsent).length;
   return `<div class="hero" style="position:relative;text-align:center;${S.school.logoR||S.school.logoL?'padding-inline:100px;':''}">${logoAbs(S.school.logoR,'right')}${logoAbs(S.school.logoL,'left')}<h2>${THICON[S.theme]||'🏫'} ${esc(S.labels.platform)}</h2><div>${esc(S.school.name)} — ${dayOf(date)} ${date}</div>
   <div style="margin:6px 0;opacity:.95;font-size:14px">مدير المدرسة: ${esc(prin())}</div><span class="live">🔴 ${p?'الحصة الجارية: '+p:'لا توجد حصة جارية الآن'}</span></div>
   <div class="grid"><div class="stat"><b>${S.teachers.length}</b>معلم</div><div class="stat"><b>${ab}</b>غائب اليوم</div>
@@ -480,16 +480,17 @@ async function driveLoad(){if(!dTok)return driveAuth(driveLoad);
     try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}setTheme(S.theme||'light');toast('تم الاسترجاع من Drive');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
 
 /* ===== الواجهات والشعارات والاعتمادات ===== */
-const DESIGNER='أحمد بن عبدالله العلي',PRINCIPAL='الدكتور حسن بن علي البلوشي';
+const PRINCIPAL='الدكتور حسن بن علي البلوشي';
 const THICON={light:'🍎',dark:'🌙',edu:'📚',royal:'🏛️',warm:'☀️',board:'🧑‍🏫',ocean:'🌊',library:'📖',alert:'⏱️'};
 const prin=()=>S.school.principal||PRINCIPAL;
 const logoAbs=(src,side)=>src?`<img src="${src}" style="position:absolute;top:14px;${side}:16px;height:64px;max-width:90px;object-fit:contain;background:rgba(255,255,255,.92);border-radius:12px;padding:4px">`:'';
-const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())} • إعداد وتصميم: ${DESIGNER}</div>`;
+const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())}</div>`;
 function setLogo(side,f){if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,240/Math.max(im.width,im.height)),c=document.createElement('canvas');
   c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);S.school['logo'+side]=c.toDataURL('image/png');save();render();toast('تم رفع الشعار');};im.src=r.result;};r.readAsDataURL(f);}
 const pimg=s=>s?`<img src="${s}" style="height:64px;max-width:90px;object-fit:contain">`:'<div style="width:64px"></div>';
-function pdfHead(t,sub){return `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0071e3;padding-bottom:10px;margin-bottom:14px">${pimg(S.school.logoR)}<div style="text-align:center"><div style="font-size:22px;font-weight:800">${esc(S.school.name)}</div><div style="font-size:17px">${t}</div><div style="color:#555">${sub}</div></div>${pimg(S.school.logoL)}</div>`;}
-function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>إعداد وتصميم: ${DESIGNER}</span></div>`;}
+function pdfHead(t,sub){return `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #catch0071e3(e;padding-bottom:)10px;margin-bottom:{}14px">${pimg(S.school.log}
+oR)}<div style="text-align:center"><div style="font-size:22px;font-weight:800">${esc(S.school.name)}</div><div style="font-size:17px">${t}</div><div style="color:#555">${sub}</div></div>${pimg(S.school.logoL)}</div>`;}
+function pdfFoot(){return `<div style="text-align:center;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333">مدير المدرسة: ${esc(prin())}</div>`;}
 const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>String(c).split('/')[0]==g));
 
 /* ===== Supabase: قاعدة بيانات سحابية ===== */
@@ -497,8 +498,7 @@ let sbTok=null,sbTimer=null,sbWarned=false;
 const sbBase=()=>S.sb.url.replace(/\/+$/,'');
 const sbH=()=>({apikey:S.sb.key,Authorization:'Bearer '+(sbTok||S.sb.key),'Content-Type':'application/json'});
 const sbReady=()=>!!sbTok||!S.sb.email;
-function sbPersist(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-function sbQueue(){if(!S||!S.sb||!S.sb.auto||!S.sb.url||!S.sb.key)return;clearTimeout(sbTimer);
+function sbPersist(){try{localStorage.setItem(KEY,JSON.stringify(S));}function sbQueue(){if(!S||!S.sb||!S.sb.auto||!S.sb.url||!S.sb.key)return;clearTimeout(sbTimer);
   sbTimer=setTimeout(()=>{if(sbReady())sbSave(true);else if(!sbWarned){sbWarned=true;toast('Supabase: سجّل الدخول من لوحة التحكم لتفعيل الحفظ التلقائي','warn');}},3000);}
 async function sbAuth(body,grant){const r=await fetch(sbBase()+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:S.sb.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.msg||('HTTP '+r.status));sbTok=j.access_token;S.sb.refresh=j.refresh_token;sbPersist();sbWarned=false;}
