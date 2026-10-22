@@ -490,12 +490,12 @@ const DESIGNER='أحمد بن عبدالله العلي',PRINCIPAL='الدكتو
 const THICON={light:'🍎',dark:'🌙',edu:'📚',royal:'🏛️',warm:'☀️',board:'🧑‍🏫',ocean:'🌊',library:'📖',alert:'⏱️'};
 const prin=()=>S.school.principal||PRINCIPAL;
 const logoAbs=(src,side)=>src?`<img src="${src}" style="position:absolute;top:14px;${side}:16px;height:64px;max-width:90px;object-fit:contain;background:rgba(255,255,255,.92);border-radius:12px;padding:4px">`:'';
-const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())} • إعداد وتصميم: ${DESIGNER}</div>`;
+const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())} • مساعد المدير: ${DESIGNER}</div>`;
 function setLogo(side,f){if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,240/Math.max(im.width,im.height)),c=document.createElement('canvas');
   c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);S.school['logo'+side]=c.toDataURL('image/png');save();render();toast('تم رفع الشعار');};im.src=r.result;};r.readAsDataURL(f);}
 const pimg=s=>s?`<img src="${s}" style="height:64px;max-width:90px;object-fit:contain">`:'<div style="width:64px"></div>';
 function pdfHead(t,sub){return `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0071e3;padding-bottom:10px;margin-bottom:14px">${pimg(S.school.logoR)}<div style="text-align:center"><div style="font-size:22px;font-weight:800">${esc(S.school.name)}</div><div style="font-size:17px">${t}</div><div style="color:#555">${sub}</div></div>${pimg(S.school.logoL)}</div>`;}
-function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>إعداد وتصميم: ${DESIGNER}</span></div>`;}
+function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>مساعد المدير: ${DESIGNER}</span></div>`;}
 const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>String(c).split('/')[0]==g));
 
 /* ===== Supabase: قاعدة بيانات سحابية ===== */
