@@ -71,7 +71,7 @@ function initialTeachers(){return TD.map((r,i)=>{const sch={};DAYS.forEach(d=>sc
 const today=()=>new Date().toISOString().slice(0,10);
 let S,page='home',date=today(),q='';
 function defaults(){return{teachers:initialTeachers(),reserves:[],
-  settings:{fullQuota:25,seniorFactor:0.25,dailyLimit:2,dailyLimitSenior:1,noBetween:true,noAfter3:true,balanceLast:true,noP8Senior:false,noConsec:true,maxWeekly:0,byLoad:true,knowsClass:true,sameSubject:true,spread:true,emergency:false,p8Quota:3,maxRun:0,onlyPresent:false,excludeSubjects:'',gradeFirst:false},
+  settings:{fullQuota:25,seniorFactor:0.25,dailyLimit:2,dailyLimitSenior:1,noBetween:true,noAfter3:true,balanceLast:true,noP8Senior:false,noConsec:true,maxWeekly:0,byLoad:true,knowsClass:true,sameSubject:true,spread:true,emergency:false,p8Quota:3,maxRun:0,onlyPresent:false,excludeSubjects:'',gradeFirst:false,nearFirst:true,nearBand:20,maxGap:0},
   theme:'light',times:{1:['08:00','08:45'],2:['09:00','09:45'],3:['10:00','10:45'],4:['11:00','11:45'],5:['12:00','12:45'],6:['13:00','13:45'],7:['14:00','14:45'],8:['15:00','15:45']},
   school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],dataVer:DATA_VER,sb:{url:'',key:'',email:'',rowId:'main',auto:false,last:'',refresh:''},drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
 function load(){try{const d=localStorage.getItem(KEY);S=d?JSON.parse(d):defaults();S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);
@@ -121,11 +121,15 @@ function candidates(r){
     if(!em&&st.maxWeekly>0&&weekCount(t,r.date)>=st.maxWeekly)return false;
     if(st.onlyPresent&&!Object.keys(t.schedule[d]||{}).length)return false;
     if(st.excludeSubjects&&st.excludeSubjects.split(/[,،]/).map(x=>x.trim()).filter(Boolean).includes(t.subject))return false;
+    if(!em&&st.maxGap>0&&gapOf(t,r)>st.maxGap)return false;
     if(!em&&st.maxRun>0){const occ=q=>busy(t,d,q)||S.reserves.some(x=>x.date==r.date&&x.substituteId==t.id&&x.period==q);let n=1,q=p-1;while(q>=1&&occ(q)){n++;q--;}q=p+1;while(q<=8&&occ(q)){n++;q++;}if(n>st.maxRun)return false;}
     return true;
   }).sort((a,b)=>{
     if(!!a.lastResort!=!!b.lastResort)return a.lastResort?1:-1;
     const ra=a.balance/limitOf(a)||0,rb=b.balance/limitOf(b)||0;
+    if(st.nearFirst){ // ضمن نفس نطاق العدالة: الأقرب لحصص المعلم أولاً
+      const w=Math.max(1,st.nearBand||20),ba=Math.floor(ra*100/w),bb=Math.floor(rb*100/w);if(ba!=bb)return ba-bb;
+      const ga=gapOf(a,r),gb=gapOf(b,r);if(ga!=gb)return ga-gb;}
     if(ra!=rb)return ra-rb;
     if(st.spread&&dayCount(a,r.date)!=dayCount(b,r.date))return dayCount(a,r.date)-dayCount(b,r.date);
     if(st.byLoad&&baseCount(a)!=baseCount(b))return baseCount(a)-baseCount(b);
@@ -168,7 +172,7 @@ function toggleAbs(id){
 function setSub(i,v){const r=S.reserves[i],o=T(r.substituteId),n=v?T(v):null;
   if(n){const c=conflictOf(n,r);
     if(c.length&&!confirm('⚠️ تنبيه تعارض:\n'+c.join('\n')+'\n\nهل تريد التعيين اليدوي رغم ذلك؟')){render();return;}
-    if(c.length)toast('عُيّن يدوياً مع وجود تعارض: '+c[0],'warn');}
+    if(c.length)toast('عُيّن يدوياً مع وجود تعارض: '+c[0],'warn');else{const w=warnOf(n,r);if(w.length)toast('تنبيه: '+w.join(' • '),'warn');}}
   if(o)o.balance=Math.max(0,o.balance-1);if(n)n.balance++;r.substituteId=n?n.id:null;save();render();}
 // كشف التعارض: حصة أساسية أو احتياط آخر في نفس الوقت، أو غياب المعلم
 function conflictOf(t,r){const c=[];
@@ -177,7 +181,20 @@ function conflictOf(t,r){const c=[];
   const ri=r.i!==undefined?r.i:S.reserves.indexOf(r);
   if(S.reserves.some((x,j)=>j!==ri&&x.date==r.date&&x.period==r.period&&x.substituteId==t.id))c.push('لديه احتياط آخر في نفس الحصة');
   return c;}
-function rowWarn(r){const t=T(r.substituteId),c=t?conflictOf(t,r):[];return c.length?`<span class="tag" style="background:var(--warn);color:#fff" title="${esc(c.join(' | '))}">⚠️ تعارض</span> `:'';}
+// بُعد الحصة عن أقرب حصة (أساسية أو احتياط) للمعلم في اليوم نفسه؛ 9 = لا حصص له ذلك اليوم
+function gapOf(t,r){const p=r.period,d=r.day,ri=r.i!==undefined?r.i:S.reserves.indexOf(r);let m=9;
+  for(let q=1;q<=8;q++){if(q==p)continue;if(busy(t,d,q)||S.reserves.some((x,j)=>j!==ri&&x.date==r.date&&x.substituteId==t.id&&x.period==q))m=Math.min(m,Math.abs(q-p));}
+  return m;}
+// تنبيه الأحمال: حصة قبل/بعد مباشرة، أو محصورة بين حصتين، أو تصبح 3 حصص متتالية فأكثر (أساسية + احتياط)
+function warnOf(t,r){const w=[],p=r.period,d=r.day,ri=r.i!==undefined?r.i:S.reserves.indexOf(r);
+  const occ=q=>q>=1&&q<=8&&(busy(t,d,q)||S.reserves.some((x,j)=>j!==ri&&x.date==r.date&&x.substituteId==t.id&&x.period==q));
+  const b=occ(p-1),a=occ(p+1);
+  if(b&&a)w.push('محصورة بين حصتين');else if(b)w.push('بعد حصة مباشرة');else if(a)w.push('قبل حصة مباشرة');
+  let n=1,q=p-1;while(occ(q)){n++;q--;}q=p+1;while(occ(q)){n++;q++;}
+  if(n>=3)w.push(`ستصبح ${n} حصص متتالية`);
+  return w;}
+function rowWarn(r){const t=T(r.substituteId);if(!t)return '';const c=conflictOf(t,r),w=warnOf(t,r);
+  return (c.length?`<span class="tag" style="background:var(--dan);color:#fff" title="${esc(c.join(' | '))}">🛑 تعارض</span> `:'')+(w.length?`<span class="tag" style="background:var(--warn);color:#fff" title="${esc(w.join(' | '))}">⚠️ ${esc(w[0])}</span> `:'');}
 function delRes(i){const r=S.reserves[i],s=T(r.substituteId);if(s)s.balance=Math.max(0,s.balance-1);S.reserves.splice(i,1);save();render();}
 function todayRes(){return S.reserves.map((r,i)=>({...r,i})).filter(r=>r.date==date).sort((a,b)=>a.absentId-b.absentId||a.period-b.period);}
 
@@ -227,10 +244,10 @@ abs(){const f=S.teachers.filter(t=>(t.name+t.subject).includes(q));
   <div class="grid">${f.map(t=>`<button class="tc ${t.isAbsent?'ab':''}" onclick="toggleAbs(${t.id})">${t.isAbsent?'🚫':'✅'} ${esc(t.name)}<br><span class="tag">${esc(t.subject)}</span></button>`).join('')}</div>`;},
 dist(){const L=todayRes();
   return `<div class="card"><input type="date" value="${date}" onchange="date=this.value;render()">
-  <button class="btn g" onclick="distribute()">⚡ توزيع تلقائي</button><button class="btn" onclick="genPDF()">📄 PDF</button><button class="btn w" onclick="genPDF(true)">📎 PDF للواتساب</button><button class="btn ${S.settings.emergency?'d':'o'}" onclick="S.settings.emergency=!S.settings.emergency;save();render()">🚨 طوارئ ${S.settings.emergency?'(مفعّل)':''}</button><button class="btn w" onclick="waAll()">💬 واتساب</button></div>
+  <button class="btn g" onclick="distribute()">⚡ توزيع تلقائي</button><button class="btn" onclick="genPDF()">📄 PDF</button><button class="btn w" onclick="genPDF(true)">📎 PDF للواتساب</button><button class="btn ${S.settings.emergency?'d':'o'}" onclick="S.settings.emergency=!S.settings.emergency;save();render()">🚨 طوارئ ${S.settings.emergency?'(مفعّل)':''}</button><button class="btn w" onclick="waAll()">💬 واتساب</button><div style="color:var(--mut);font-size:13px;margin-top:6px">في قائمة البديل: 🛑 تعارض مع حصة أخرى • ⚠️ حصص متتالية أو محصورة (يُفضّل تجنبه)</div></div>
   <div class="card">${L.length?`<table><tr><th>الغائب</th><th>الحصة</th><th>الصف</th><th>البديل</th><th></th></tr>${L.map(r=>`<tr>
   <td>${esc(T(r.absentId).name)}</td><td>${r.period}${r.period==8?' ⭐':''}</td><td>${esc(r.className)}</td>
-  <td>${rowWarn(r)}<select onchange="setSub(${r.i},this.value)"><option value="">— بلا بديل —</option>${S.teachers.filter(t=>!t.isAbsent).map(t=>`<option value="${t.id}" ${t.id==r.substituteId?'selected':''}>${conflictOf(t,r).length?'⚠️ ':''}${esc(t.name)} — ${limitOf(t)-t.balance}/${limitOf(t)}${r.period==8?' | ح8: '+(p8LimitOf(t)-p8Count(t))+'/'+p8LimitOf(t):''}</option>`).join('')}</select></td>
+  <td>${rowWarn(r)}<select onchange="setSub(${r.i},this.value)"><option value="">— بلا بديل —</option>${S.teachers.filter(t=>!t.isAbsent).map(t=>`<option value="${t.id}" ${t.id==r.substituteId?'selected':''}>${conflictOf(t,r).length?'🛑 ':''}${warnOf(t,r).length?'⚠️ ':''}${esc(t.name)} — ${limitOf(t)-t.balance}/${limitOf(t)}${r.period==8?' | ح8: '+(p8LimitOf(t)-p8Count(t))+'/'+p8LimitOf(t):''}</option>`).join('')}</select></td>
   <td><button class="btn w" onclick="waOne(${r.i})">💬</button><button class="btn d" onclick="delRes(${r.i})">🗑️</button></td></tr>`).join('')}</table>`
   :'<p>لا توجد حصص احتياط. سجّل غياب معلم من صفحة "الغياب" ثم اضغط "توزيع تلقائي".</p>'}</div>`;},
 teach(){const f=S.teachers.filter(t=>(t.name+t.subject).includes(q));
@@ -256,6 +273,9 @@ set(){const st=S.settings;return `<div class="card"><h3>الثيم</h3>${Object.
   <label><input type="checkbox" ${st.noAfter3?'checked':''} onchange="S.settings.noAfter3=this.checked;save()"> استبعاد من لديه 3 حصص متتالية</label><br>
   <label><input type="checkbox" ${st.balanceLast?'checked':''} onchange="S.settings.balanceLast=this.checked;save()"> موازنة الحصة الأخيرة</label><br>
   ${chk('emergency','🚨 وضع الطوارئ: حد يومي +1 وسقف +3 وبلا قيود التجاور والحد الأسبوعي')}${chk('spread','توزيع العبء على أكبر عدد من المعلمين في اليوم')}${chk('byLoad','الأفضلية لمن لديه حصص أساسية أقل')}${chk('sameSubject','تفضيل نفس التخصص')}${chk('knowsClass','تفضيل من يدرّس نفس الصف')}${chk('noConsec','منع حصتين احتياط متتاليتين للمعلم نفسه')}${chk('noP8Senior','استبعاد المعلم الأول من الحصة الأخيرة')}
+  ${chk('nearFirst','تفضيل الحصة القريبة من حصص المعلم وتجنب البعيدة عن جدوله')}
+  نطاق العدالة قبل القرب (%) <input type="number" style="width:60px" value="${st.nearBand||20}" onchange="S.settings.nearBand=+this.value;save()">
+  أقصى بُعد عن أقرب حصة له (0 = بلا حد) <input type="number" style="width:60px" value="${st.maxGap||0}" onchange="S.settings.maxGap=+this.value;save()"><br>
   ${chk('onlyPresent','استبعاد من ليس لديه حصص أساسية في ذلك اليوم (غير متواجد)')}${chk('gradeFirst','تفضيل من يدرّس نفس المرحلة/الصف الدراسي')}
   أقصى عدد حصص متتالية بعد الإسناد (0 = بلا حد) <input type="number" style="width:60px" value="${st.maxRun||0}" onchange="S.settings.maxRun=+this.value;save()"><br>
   تخصصات مستثناة من الاحتياط (بفاصلة) <input value="${esc(st.excludeSubjects||'')}" onchange="S.settings.excludeSubjects=this.value;save()"><br>
@@ -490,12 +510,12 @@ const DESIGNER='أحمد بن عبدالله العلي',PRINCIPAL='الدكتو
 const THICON={light:'🍎',dark:'🌙',edu:'📚',royal:'🏛️',warm:'☀️',board:'🧑‍🏫',ocean:'🌊',library:'📖',alert:'⏱️'};
 const prin=()=>S.school.principal||PRINCIPAL;
 const logoAbs=(src,side)=>src?`<img src="${src}" style="position:absolute;top:14px;${side}:16px;height:64px;max-width:90px;object-fit:contain;background:rgba(255,255,255,.92);border-radius:12px;padding:4px">`:'';
-const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())} • مساعد المدير: ${DESIGNER}</div>`;
+const foot=()=>`<div style="text-align:center;color:var(--mut);font-size:13px;padding:14px">مدير المدرسة: ${esc(prin())} • إعداد وتصميم: ${DESIGNER}</div>`;
 function setLogo(side,f){if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,240/Math.max(im.width,im.height)),c=document.createElement('canvas');
   c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);S.school['logo'+side]=c.toDataURL('image/png');save();render();toast('تم رفع الشعار');};im.src=r.result;};r.readAsDataURL(f);}
 const pimg=s=>s?`<img src="${s}" style="height:64px;max-width:90px;object-fit:contain">`:'<div style="width:64px"></div>';
 function pdfHead(t,sub){return `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0071e3;padding-bottom:10px;margin-bottom:14px">${pimg(S.school.logoR)}<div style="text-align:center"><div style="font-size:22px;font-weight:800">${esc(S.school.name)}</div><div style="font-size:17px">${t}</div><div style="color:#555">${sub}</div></div>${pimg(S.school.logoL)}</div>`;}
-function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>مساعد المدير: ${DESIGNER}</span></div>`;}
+function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>إعداد وتصميم: ${DESIGNER}</span></div>`;}
 const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>String(c).split('/')[0]==g));
 
 /* ===== Supabase: قاعدة بيانات سحابية ===== */
