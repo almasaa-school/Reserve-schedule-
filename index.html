@@ -73,10 +73,14 @@ let S,page='home',date=today(),q='';
 function defaults(){return{teachers:initialTeachers(),reserves:[],
   settings:{fullQuota:25,seniorFactor:0.25,dailyLimit:2,dailyLimitSenior:1,noBetween:true,noAfter3:true,balanceLast:true,noP8Senior:false,noConsec:true,maxWeekly:0,byLoad:true,knowsClass:true,sameSubject:true,spread:true,emergency:false,p8Quota:3,maxRun:0,onlyPresent:false,excludeSubjects:'',gradeFirst:false,nearFirst:true,nearBand:20,maxGap:0},
   theme:'light',times:{1:['08:00','08:45'],2:['09:00','09:45'],3:['10:00','10:45'],4:['11:00','11:45'],5:['12:00','12:45'],6:['13:00','13:45'],7:['14:00','14:45'],8:['15:00','15:45']},
-  school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],dataVer:DATA_VER,sb:{url:'',key:'',email:'',rowId:'main',auto:false,last:'',refresh:''},drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
+  school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],absentDays:{},dataVer:DATA_VER,sb:{url:'',key:'',email:'',rowId:'main',auto:false,last:'',refresh:''},drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
 function load(){try{const d=localStorage.getItem(KEY);S=d?JSON.parse(d):defaults();S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);
   // استبدال البيانات القديمة (معلمين وجداول وأرصدة واحتياط) عند تغيّر نسخة البيانات
-  if(S.dataVer!==DATA_VER){S.teachers=initialTeachers();S.reserves=[];S.absenceLog=[];S.dataVer=DATA_VER;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(x){}}
+  if(S.dataVer!==DATA_VER){S.teachers=initialTeachers();S.reserves=[];S.absenceLog=[];S.absentDays={};S.dataVer=DATA_VER;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(x){}}
+  // ترحيل: الغياب أصبح مرتبطاً بتاريخ اليوم (S.absentDays) بدل علامة دائمة على المعلم
+  if(!S.absentDays){S.absentDays={};const ids=S.teachers.filter(t=>t.isAbsent).map(t=>t.id),d0=(S.absenceLog||[]).map(x=>x.date).sort().pop();if(ids.length&&d0)S.absentDays[d0]=ids;}
+  if(!S.lastToday)S.lastToday=today();
+  absSync=null;syncAbs();
   }catch(e){S=defaults();}}
 function save(){driveQueue();sbQueue();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('تعذّر الحفظ في المتصفح','err');}}
 
@@ -150,7 +154,7 @@ function distribute(){S.teachers.filter(t=>t.isAbsent).forEach(t=>createFor(t,da
   const r=redistributeEmpty(date);save();render();
   toast(`تم توزيع ${r.ok} حصة`+(r.fail?` — تعذّر ${r.fail}`:''),r.fail?'warn':'ok');}
 function toggleAbs(id){
-  const t=T(id);t.isAbsent=!t.isAbsent;
+  const t=T(id);t.isAbsent=!t.isAbsent;{const L=S.absentDays[date]=(S.absentDays[date]||[]).filter(x=>x!=id);if(t.isAbsent)L.push(id);}
   if(t.isAbsent){
     // 1) إلغاء حصص احتياطه كبديل
     const mine=S.reserves.filter(r=>r.date==date&&r.substituteId==id);
@@ -373,7 +377,7 @@ function autoQuota(){const mx=Math.max(1,...S.teachers.map(baseCount));
 function resetQuota(){S.teachers.forEach(t=>t.customLimit=null);save();render();toast('أُعيدت الأنصبة الافتراضية');}
 
 function render(keepFocus){
-  try{
+  try{rollDay();syncAbs();
     $('side').innerHTML=`<h1>${THICON[S.theme]||'🏫'} ${esc(S.labels.platform)}</h1>`+PAGES.map(([k,v])=>`<button class="nav ${page==k?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
     if(keepFocus){const pos=$('q')?.selectionStart;$('main').innerHTML=R[page]()+foot();const e=$('q');if(e){e.focus();e.setSelectionRange(pos,pos);}}
     else $('main').innerHTML=R[page]()+foot();
@@ -387,7 +391,7 @@ function shareAbs(){const a=S.teachers.filter(t=>t.isAbsent);if(!a.length)return
 function delT(id){if(!confirm('حذف المعلم؟'))return;S.teachers=S.teachers.filter(t=>t.id!=id);S.reserves=S.reserves.filter(r=>r.absentId!=id&&r.substituteId!=id);save();render();}
 function expCSV(){const ta=$('csv');ta.style.display='block';
   ta.value=S.teachers.map(t=>[t.name,t.subject,t.type,t.phone,...DAYS.map(d=>Object.entries(t.schedule[d]||{}).map(([p,c])=>p+':'+c).join(' '))].join(',')).join('\n');ta.select();}
-function setTheme(k){S.theme=k;document.documentElement.dataset.th=k;save();render();}
+function setTheme(k){absSync=null;S.theme=k;document.documentElement.dataset.th=k;save();render();}
 function expJSON(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='masaa-backup.json';a.click();}
 function impJSON(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{S=JSON.parse(r.result);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);save();setTheme(S.theme);toast('تم الاستيراد');}catch(e){toast('ملف غير صالح','err');}};r.readAsText(f);}
 function resetAll(){if(confirm('سيتم مسح كل البيانات. متابعة؟')){localStorage.removeItem(KEY);load();setTheme('light');}}
@@ -545,6 +549,11 @@ async function sbLoad(){if(!sbReady())return toast('سجّل الدخول أول
     const sbk=S.sb,dk=S.drive;S=j[0].data;S.sb=sbk;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
     sbPersist();setTheme(S.theme||'light');toast('تم الاسترجاع من Supabase');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
 
+/* ===== الغياب حسب اليوم ===== */
+// يُعرض الغياب فقط لتاريخ اليوم المختار؛ عند دخول يوم جديد يُزال التظليل تلقائياً ويعود عند الرجوع لذلك التاريخ
+let absSync=null;
+function syncAbs(){if(absSync===date)return;const A=S.absentDays||(S.absentDays={}),L=A[date]||[];S.teachers.forEach(t=>{t.isAbsent=L.includes(t.id);});absSync=date;}
+function rollDay(){const td=today();if(S.lastToday!==td){S.lastToday=td;date=td;}}
 /* ===== INIT ===== */
 // أخطاء "Script error." بلا رقم سطر تأتي من سكربت خارجي أو من المتصفح (مثل الترجمة التلقائية) ولا تخص المنصة؛ نتجاهل عرضها
 window.onerror=(m,s,l)=>{if(/^Script error/i.test(String(m))&&!l){console.warn('تم تجاهل خطأ خارجي:',m);return true;}toast('خطأ: '+m+' (سطر '+l+')','err');};
