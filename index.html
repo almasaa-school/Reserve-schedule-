@@ -77,6 +77,7 @@ function defaults(){return{teachers:initialTeachers(),reserves:[],
   theme:'light',times:{1:['08:00','08:45'],2:['09:00','09:45'],3:['10:00','10:45'],4:['11:00','11:45'],5:['12:00','12:45'],6:['13:00','13:45'],7:['14:00','14:45'],8:['15:00','15:45']},
   school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],absentDays:{},cycles:[],cycle:{name:'الدورة 1',start:''},dataVer:DATA_VER,sb:{url:'',key:'',email:'',rowId:'main',auto:false,last:'',refresh:''},drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
 function load(){try{const d=localStorage.getItem(KEY);S=d?JSON.parse(d):defaults();S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);
+  if(/supabase/i.test(S.sb.url||'')){S.sb.url='';S.sb.key='';S.sb.rev='';S.sb.refresh='';S.sb.unsynced=false;} // إعدادات Supabase القديمة لا تصلح لـ Firebase
   // استبدال البيانات القديمة (معلمين وجداول وأرصدة واحتياط) عند تغيّر نسخة البيانات
   if(S.dataVer!==DATA_VER){S.teachers=initialTeachers();S.reserves=[];S.absenceLog=[];S.absentDays={};S.dataVer=DATA_VER;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(x){}}
   // ترحيل: الغياب أصبح مرتبطاً بتاريخ اليوم (S.absentDays) بدل علامة دائمة على المعلم
@@ -286,28 +287,22 @@ set(){const st=S.settings;return `<div class="card"><h3>الثيم</h3>${Object.
   أقصى عدد حصص متتالية بعد الإسناد (0 = بلا حد) <input type="number" style="width:60px" value="${st.maxRun||0}" onchange="S.settings.maxRun=+this.value;save()"><br>
   تخصصات مستثناة من الاحتياط (بفاصلة) <input value="${esc(st.excludeSubjects||'')}" onchange="S.settings.excludeSubjects=this.value;save()"><br>
   نصاب الحصة الأخيرة (8) لكل معلم <input type="number" style="width:60px" value="${st.p8Quota}" onchange="S.settings.p8Quota=+this.value;save()"><br>الحد الأسبوعي للاحتياط (0 = بلا حد) <input type="number" style="width:70px" value="${st.maxWeekly||0}" onchange="S.settings.maxWeekly=+this.value;save()"></div>
-  ${cycleCard()}<div class="card"><h3>🗄️ قاعدة بيانات Supabase</h3>
-  رابط المشروع <input dir="ltr" style="width:100%" placeholder="https://xxxx.supabase.co" value="${esc(S.sb.url)}" onchange="S.sb.url=this.value.trim();save()"><br><br>
-  مفتاح anon (public) <input dir="ltr" style="width:100%" value="${esc(S.sb.key)}" onchange="S.sb.key=this.value.trim();save()"><br><br>
-  بريد الدخول (موصى به) <input dir="ltr" value="${esc(S.sb.email)}" onchange="S.sb.email=this.value.trim();save()"> اسم السجل <input dir="ltr" style="width:90px" value="${esc(S.sb.rowId)}" onchange="S.sb.rowId=this.value.trim()||'main';save()"><br>
-  <label><input type="checkbox" ${S.sb.auto?'checked':''} onchange="S.sb.auto=this.checked;save()"> حفظ تلقائي بعد كل تغيير</label><br>
-  <label><input type="checkbox" ${S.sb.open?'checked':''} onchange="S.sb.open=this.checked;save();render()"> وضع مباشر بدون تسجيل دخول (يتطلب سياسة SQL المفتوحة في الأسفل)</label><br>
-  <button class="btn g" onclick="sbLogin()">🔗 دخول وحفظ الآن</button><button class="btn o" onclick="sbLoad()">⬇️ استرجاع من Supabase</button><button class="btn o" onclick="sbLink()">🔗 نسخ رابط الربط السريع</button>
-  <p style="color:var(--mut)">${S.sb.last?'آخر حفظ: '+esc(S.sb.last):'لم يُحفظ بعد'}</p>
-  <details><summary>SQL لإنشاء الجدول (انسخه في SQL Editor)</summary><pre dir="ltr" style="white-space:pre-wrap;font-size:12px">create table if not exists masaa_state (
-  id text primary key,
-  data jsonb not null,
-  updated_at timestamptz default now()
-);
-alter table masaa_state enable row level security;
-create policy "staff_all" on masaa_state
-  for all to authenticated
-  using (true) with check (true);
-
--- للوضع المباشر بدون دخول (اختياري):
-create policy "open_main" on masaa_state
-  for all to anon
-  using (id = 'main') with check (id = 'main');</pre><small>ثم أنشئ مستخدماً من Authentication ← Users وضع بريده هنا. آخر من يحفظ يكتب فوق السابق.</small></details></div>
+  ${bkCard()}${cycleCard()}<div class="card"><h3>🔥 قاعدة بيانات Firebase (Firestore)</h3>
+  معرّف المشروع (Project ID) <input dir="ltr" style="width:100%" placeholder="my-school-12345" value="${esc(S.sb.url)}" onchange="S.sb.url=this.value.trim();save()"><br><br>
+  مفتاح API (Web API Key) <input dir="ltr" style="width:100%" value="${esc(S.sb.key)}" onchange="S.sb.key=this.value.trim();save()"><br><br>
+  اسم السجل <input dir="ltr" style="width:100px" value="${esc(S.sb.rowId)}" onchange="S.sb.rowId=this.value.trim()||'main';save()"><br>
+  <label><input type="checkbox" ${S.sb.auto?'checked':''} onchange="S.sb.auto=this.checked;save()"> حفظ تلقائي ومزامنة بين الأجهزة</label><br>
+  <button class="btn g" onclick="sbLogin()">🔗 اتصال وحفظ الآن</button><button class="btn o" onclick="sbLoad()">⬇️ استرجاع من Firebase</button><button class="btn o" onclick="sbLink()">🔗 نسخ رابط الربط السريع</button>
+  <p style="color:var(--mut)">${S.sb.last?'آخر حفظ: '+esc(S.sb.last):'لم يُحفظ بعد'} — الدخول مجهول وتلقائي، لا بريد ولا كلمة مرور.</p>
+  <details><summary>خطوات الإعداد (مرة واحدة)</summary><small>1) console.firebase.google.com ← أنشئ مشروعاً.<br>2) Build ← Firestore Database ← Create database.<br>3) Build ← Authentication ← Sign-in method ← فعّل Anonymous.<br>4) في Firestore ← Rules الصق القواعد التالية ثم Publish.<br>5) Project settings ← General: انسخ Project ID و Web API Key إلى الحقلين أعلاه.</small>
+  <pre dir="ltr" style="white-space:pre-wrap;font-size:12px">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /masaa_state/{doc} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}</pre><small>كل من يفتح موقعك يحصل على دخول مجهول، فلا تنشر رابط الربط السريع علناً.</small></details></div>
   <div class="card"><h3>☁️ Google Drive</h3>Client ID <input style="width:100%" value="${esc(S.drive.clientId)}" placeholder="xxxx.apps.googleusercontent.com" onchange="S.drive.clientId=this.value.trim();save()"><br><br>
   معرّف مجلد Drive (اختياري) <input style="width:100%" value="${esc(S.drive.folderId)}" onchange="S.drive.folderId=this.value.trim();S.drive.fileId='';save()"><br>
   <label><input type="checkbox" ${S.drive.auto?'checked':''} onchange="S.drive.auto=this.checked;save()"> حفظ تلقائي بعد كل تغيير</label><br>
@@ -386,7 +381,7 @@ function resetQuota(){S.teachers.forEach(t=>t.customLimit=null);save();render();
 
 function render(keepFocus){
   try{rollDay();syncAbs();
-    $('side').innerHTML=`<h1>${THICON[S.theme]||'🏫'} ${esc(S.labels.platform)}</h1>`+PAGES.map(([k,v])=>`<button class="nav ${page==k?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
+    $('side').innerHTML=`<h1>${THICON[S.theme]||'🏫'} ${esc(S.labels.platform)}</h1>${sbChip()}`+PAGES.map(([k,v])=>`<button class="nav ${page==k?'on':''}" onclick="go('${k}')">${v}</button>`).join('');
     if(keepFocus){const pos=$('q')?.selectionStart;$('main').innerHTML=R[page]()+foot();const e=$('q');if(e){e.focus();e.setSelectionRange(pos,pos);}}
     else $('main').innerHTML=R[page]()+foot();
   }catch(e){$('main').innerHTML='<div class="card">حدث خطأ أثناء عرض الصفحة: '+esc(e.message)+'</div>';}
@@ -401,8 +396,8 @@ function expCSV(){const ta=$('csv');ta.style.display='block';
   ta.value=S.teachers.map(t=>[t.name,t.subject,t.type,t.phone,...DAYS.map(d=>Object.entries(t.schedule[d]||{}).map(([p,c])=>p+':'+c).join(' '))].join(',')).join('\n');ta.select();}
 function setTheme(k){absSync=null;S.theme=k;document.documentElement.dataset.th=k;save();render();}
 function expJSON(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='masaa-backup.json';a.click();}
-function impJSON(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{S=JSON.parse(r.result);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);save();setTheme(S.theme);toast('تم الاستيراد');}catch(e){toast('ملف غير صالح','err');}};r.readAsText(f);}
-function resetAll(){if(confirm('سيتم مسح كل البيانات. متابعة؟')){localStorage.removeItem(KEY);load();setTheme('light');}}
+function impJSON(f){if(!f)return;const r=new FileReader();r.onload=()=>{try{localBackup('قبل استيراد JSON');S=JSON.parse(r.result);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);save();setTheme(S.theme);toast('تم الاستيراد');}catch(e){toast('ملف غير صالح','err');}};r.readAsText(f);}
+function resetAll(){if(confirm('سيتم مسح كل البيانات. متابعة؟')){localBackup('قبل مسح الكل');localStorage.removeItem(KEY);load();setTheme('light');}}
 
 /* ===== Excel / إضافة فردية / مشاركة PDF ===== */
 function importRows(rows){
@@ -514,7 +509,7 @@ async function driveLoad(){if(!dTok)return driveAuth(driveLoad);
     const r=await fetch(`https://www.googleapis.com/drive/v3/files/${d.fileId}?alt=media`,{headers:dH()});if(!r.ok)throw new Error('HTTP '+r.status);
     if(!confirm('سيتم استبدال بياناتك الحالية بنسخة Drive. متابعة؟'))return;
     const n=await r.json(),keep={clientId:d.clientId,fileId:d.fileId,folderId:d.folderId,auto:d.auto};
-    const sbk=S.sb;S=n;S.sb=Object.assign({},defaults().sb,sbk);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive,keep);
+    localBackup('قبل الاسترجاع من Drive');const sbk=S.sb;S=n;S.sb=Object.assign({},defaults().sb,sbk);S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive,keep);
     try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}setTheme(S.theme||'light');toast('تم الاسترجاع من Drive');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
 
 /* ===== الواجهات والشعارات والاعتمادات ===== */
@@ -529,34 +524,6 @@ const pimg=s=>s?`<img src="${s}" style="height:64px;max-width:90px;object-fit:co
 function pdfHead(t,sub){return `<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #0071e3;padding-bottom:10px;margin-bottom:14px">${pimg(S.school.logoR)}<div style="text-align:center"><div style="font-size:22px;font-weight:800">${esc(S.school.name)}</div><div style="font-size:17px">${t}</div><div style="color:#555">${sub}</div></div>${pimg(S.school.logoL)}</div>`;}
 function pdfFoot(){return `<div style="display:flex;justify-content:space-between;border-top:1px solid #ccc;margin-top:14px;padding-top:8px;font-size:12px;color:#333"><span>مدير المدرسة: ${esc(prin())}</span><span>إعداد وتصميم: ${DESIGNER}</span></div>`;}
 const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>String(c).split('/')[0]==g));
-
-/* ===== Supabase: قاعدة بيانات سحابية ===== */
-let sbTok=null,sbTimer=null,sbWarned=false;
-const sbBase=()=>S.sb.url.replace(/\/+$/,'');
-const sbH=()=>({apikey:S.sb.key,Authorization:'Bearer '+(sbTok||S.sb.key),'Content-Type':'application/json'});
-const sbReady=()=>!!sbTok||!S.sb.email||S.sb.open;
-function sbPersist(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-function sbQueue(){if(!S||!S.sb||!S.sb.auto||!S.sb.url)return;sbDirty=true;clearTimeout(sbTimer);
-  sbTimer=setTimeout(()=>{if(sbReady())sbSave(true);else if(!sbWarned){sbWarned=true;toast('Supabase: سجّل الدخول من لوحة التحكم لتفعيل الحفظ التلقائي','warn');}},3000);}
-async function sbAuth(body,grant){const r=await fetch(sbBase()+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:S.sb.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.msg||('HTTP '+r.status));sbTok=j.access_token;S.sb.refresh=j.refresh_token;sbPersist();sbWarned=false;}
-let sbRP=null;
-function sbRefresh(){return sbRP||(sbRP=_sbRefresh().finally(()=>{sbRP=null;}));}
-async function _sbRefresh(){if(!S.sb.refresh)return false;try{await sbAuth({refresh_token:S.sb.refresh},'refresh_token');return true;}catch(e){if(!(e instanceof TypeError)){S.sb.refresh='';sbPersist();}sbTok=null;return false;}}
-async function sbLogin(){const b=S.sb;if(!b.url||!b.key)return toast('أدخل رابط المشروع ومفتاح anon','err');
-  try{if(b.email&&!b.open){const pw=prompt('كلمة مرور '+b.email);if(!pw)return;await sbAuth({email:b.email,password:pw},'password');}await sbSave(false);}catch(e){toast('فشل الدخول: '+e.message,'err');}}
-async function sbSave(quiet,retry){try{const ts=new Date().toISOString();const{sb,drive,...rest}=S; // لا نرفع مفاتيح الاتصال
-  const r=await fetch(sbBase()+'/rest/v1/masaa_state?on_conflict=id',{method:'POST',headers:{...sbH(),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:S.sb.rowId||'main',data:rest,updated_at:ts})});
-  if(r.status==401&&!retry&&await sbRefresh())return sbSave(quiet,true);
-  if(!r.ok){const t=await r.text();throw new Error('HTTP '+r.status+' '+t.slice(0,120));}
-  S.sb.rev=ts;sbDirty=false;S.sb.last=new Date().toLocaleString('ar');sbPersist();if(!quiet){toast('🗄️ تم الحفظ في Supabase');render();}}
-  catch(e){toast('فشل الحفظ في Supabase: '+e.message,'err');}}
-async function sbLoad(){if(!sbReady())return toast('سجّل الدخول أولاً (زر "دخول وحفظ")','warn');
-  try{const r=await fetch(sbBase()+'/rest/v1/masaa_state?select=data,updated_at&id=eq.'+encodeURIComponent(S.sb.rowId||'main'),{headers:sbH()});if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json();if(!j.length)return toast('لا توجد نسخة محفوظة بهذا الاسم','warn');
-    if(!confirm('سيتم استبدال بياناتك الحالية بنسخة Supabase المحفوظة في '+new Date(j[0].updated_at).toLocaleString('ar')+'. متابعة؟'))return;
-    const sbk=S.sb,dk=S.drive;S=j[0].data;S.sb=sbk;S.sb.rev=j[0].updated_at;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
-    sbPersist();setTheme(S.theme||'light');toast('تم الاسترجاع من Supabase');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
 
 /* ===== الغياب حسب اليوم ===== */
 // يُعرض الغياب فقط لتاريخ اليوم المختار؛ عند دخول يوم جديد يُزال التظليل تلقائياً ويعود عند الرجوع لذلك التاريخ
@@ -654,32 +621,103 @@ function regOf(t){const g=[],st=S.settings;
   if((t.noDays||[]).length)g.push('أيام ممنوعة: '+t.noDays.join('، '));
   if(t.lastResort)g.push('آخر خيار');
   return g;}
-/* ===== Supabase: اتصال مباشر ومزامنة تلقائية ===== */
-// يمكنك لصق بيانات مشروعك هنا مرة واحدة ليتصل كل جهاز تلقائياً بدون أي إدخال (مفتاح anon عام بطبيعته):
-const SB_DEFAULT={url:'',key:'',email:''};
-let sbDirty=false;
-function sbApply(d,ts){const sbk=S.sb,dk=S.drive;S=d;S.sb=sbk;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
+/* ===== النسخ الاحتياطية: حماية من فقد البيانات ===== */
+function localBackup(label){try{const L=JSON.parse(localStorage.getItem(KEY+'-bk')||'[]');L.unshift({ts:new Date().toISOString(),label,data:S});localStorage.setItem(KEY+'-bk',JSON.stringify(L.slice(0,4)));}catch(e){}}
+const hasWork=()=>S.reserves.length>0||S.cycles.length>0||S.teachers.some(t=>t.balance>0);
+function applyData(d){const sbk=S.sb,dk=S.drive;S=d;S.sb=sbk;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
+  S.cycles=S.cycles||[];S.cycle=Object.assign({name:'الدورة 1',start:today()},S.cycle);S.absentDays=S.absentDays||{};absSync=null;save();render();}
+function bkCard(){let L=[];try{L=JSON.parse(localStorage.getItem(KEY+'-bk')||'[]');}catch(e){}
+  return `<div class="card"><h3>🛟 النسخ الاحتياطية</h3><p style="color:var(--mut)">تُحفظ نسخة من بياناتك على هذا الجهاز قبل أي استرجاع أو استيراد أو مسح، ونسخة يومية في Firebase (آخر 7 أيام).</p>
+  <button class="btn" onclick="expJSON()">⬇️ تنزيل نسخة الآن</button><button class="btn o" onclick="sbBkList()">☁️ نسخ Firebase اليومية</button>
+  ${L.length?`<table>${L.map((x,i)=>`<tr><td>${new Date(x.ts).toLocaleString('ar')}</td><td>${esc(x.label)} — ${x.data.teachers.length} معلم، ${x.data.reserves.length} حصة احتياط</td><td><button class="btn o" onclick="restoreBk(${i})">استعادة</button></td></tr>`).join('')}</table>`:'<small>لا نسخ محلية بعد</small>'}</div>`;}
+function restoreBk(i){const x=JSON.parse(localStorage.getItem(KEY+'-bk')||'[]')[i];if(!x||!confirm('استعادة هذه النسخة؟ ستُحفظ بياناتك الحالية كنسخة احتياطية أولاً.'))return;
+  localBackup('قبل الاستعادة');applyData(x.data);toast('تمت الاستعادة');}
+/* ===== مؤشر حالة المزامنة ===== */
+function chipInfo(){const b=S.sb;if(!b||!b.url||!b.key)return null;
+  if(b.unsynced&&!sbReady())return['⚠️ غير محفوظ في السحابة — اضغط للدخول','var(--dan)'];
+  if(b.unsynced)return['⏳ جارٍ الحفظ في السحابة…','var(--warn)'];
+  return['☁️ محفوظ في السحابة','var(--suc)'];}
+function sbChip(){const c=chipInfo();return c?`<div id="sbchip" onclick="sbSync()" style="margin:0 8px 12px;padding:6px 12px;border-radius:12px;font-size:12px;font-weight:600;color:#fff;cursor:pointer;background:${c[1]}">${c[0]}</div>`:'';}
+function setChip(){const e=$('sbchip'),c=chipInfo();if(e&&c){e.textContent=c[0];e.style.background=c[1];}}
+function sbSync(){if(sbReady())sbSave(false);else sbLogin();}
+
+/* ===== Firebase (Firestore عبر REST) + دخول مجهول تلقائي + نسخ احتياطية ===== */
+// يمكنك لصق بيانات مشروعك هنا مرة واحدة ليتصل كل جهاز تلقائياً بدون أي إدخال:
+// 👇 تم تعديل هذا السطر لإضافة المفاتيح مباشرة 👇
+const FB_DEFAULT={projectId:'ضع_معرف_المشروع_هنا',apiKey:'ضع_مفتاح_API_هنا'};
+let fbTok=null,fbExp=0,sbTimer=null,sbDirty=false,sbSync_=false;
+const fbPid=()=>S.sb.url,fbKey=()=>S.sb.key;
+const fbDocs=()=>`https://firestore.googleapis.com/v1/projects/${fbPid()}/databases/(default)/documents`;
+const sbReady=()=>!!(S.sb&&S.sb.url&&S.sb.key);
+function sbPersist(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+async function fbAuth(){ // دخول مجهول تلقائي: لا بريد ولا كلمة مرور، وتُحفظ الجلسة على الجهاز
+  if(fbTok&&Date.now()<fbExp-60000)return fbTok;
+  try{let r,j;
+    if(S.sb.refresh){r=await fetch('https://securetoken.googleapis.com/v1/token?key='+fbKey(),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(S.sb.refresh)});j=await r.json();
+      if(r.ok){fbTok=j.id_token;S.sb.refresh=j.refresh_token;fbExp=Date.now()+(+j.expires_in)*1000;sbPersist();return fbTok;}}
+    r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key='+fbKey(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({returnSecureToken:true})});j=await r.json();
+    if(r.ok){fbTok=j.idToken;S.sb.refresh=j.refreshToken;fbExp=Date.now()+(+j.expiresIn)*1000;sbPersist();return fbTok;}
+  }catch(e){}
+  return fbTok=null; // إن لم يُفعَّل الدخول المجهول نحاول بلا مصادقة (يلزم قواعد مفتوحة)
+}
+async function fbF(path,opt={}){const t=await fbAuth(),h={'Content-Type':'application/json'};if(t)h.Authorization='Bearer '+t;
+  return fetch(fbDocs()+path+(path.includes('?')?'&':'?')+'key='+fbKey(),{...opt,headers:h});}
+const fbName=id=>`projects/${fbPid()}/databases/(default)/documents/masaa_state/`+id;
+async function fbGetMeta(id){const r=await fbF('/masaa_state/'+encodeURIComponent(id));if(r.status==404)return null;if(!r.ok)throw new Error('HTTP '+r.status);
+  const f=(await r.json()).fields||{};return{parts:+((f.parts&&f.parts.integerValue)||0),updated_at:f.updated_at&&f.updated_at.stringValue};}
+async function fbGet(id){const m=await fbGetMeta(id);if(!m)return null;
+  const ps=await Promise.all(Array.from({length:m.parts},(_,i)=>fbF('/masaa_state/'+encodeURIComponent(id+'__p'+i)).then(r=>r.json()).then(j=>j.fields.json.stringValue)));
+  return{data:JSON.parse(ps.join('')),updated_at:m.updated_at};}
+// حد مستند Firestore 1 ميغابايت، لذا تُقسَّم البيانات إلى أجزاء وتُكتب دفعة واحدة ذرّية
+async function fbPut(id,obj,ts){const js=JSON.stringify(obj),parts=[];for(let i=0;i<js.length;i+=250000)parts.push(js.slice(i,i+250000));if(!parts.length)parts.push('');
+  let old=0;try{const m=await fbGetMeta(id);old=m?m.parts:0;}catch(e){}
+  const w=parts.map((p,i)=>({update:{name:fbName(id+'__p'+i),fields:{json:{stringValue:p}}}}));
+  for(let i=parts.length;i<old;i++)w.push({delete:fbName(id+'__p'+i)});
+  w.push({update:{name:fbName(id),fields:{parts:{integerValue:String(parts.length)},updated_at:{stringValue:ts}}}});
+  const r=await fbF(':commit',{method:'POST',body:JSON.stringify({writes:w})});if(!r.ok)throw new Error('HTTP '+r.status+' '+(await r.text()).slice(0,140));}
+function sbQueue(){if(!S||!S.sb||!S.sb.auto||!S.sb.url)return;S.sb.unsynced=true;setChip();sbDirty=true;clearTimeout(sbTimer);sbTimer=setTimeout(()=>sbSave(true),3000);}
+async function sbSave(quiet){try{if(!sbReady())throw new Error('أدخل Project ID ومفتاح API');if(!S.teachers.length)throw new Error('لا يوجد معلمون — لن تُرفع بيانات فارغة');
+    const ts=new Date().toISOString();await sbSnap();const{sb,drive,...rest}=S;await fbPut(S.sb.rowId||'main',rest,ts);
+    S.sb.rev=ts;sbDirty=false;S.sb.unsynced=false;setChip();S.sb.last=new Date().toLocaleString('ar');sbPersist();if(!quiet){toast('🔥 تم الحفظ في Firebase');render();}}
+  catch(e){toast('فشل الحفظ في Firebase: '+e.message,'err');}}
+function sbApply(d,ts){localBackup('قبل تحميل نسخة السحابة');const sbk=S.sb,dk=S.drive;S=d;S.sb=sbk;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
   S.cycles=S.cycles||[];S.cycle=Object.assign({name:'الدورة 1',start:today()},S.cycle);S.absentDays=S.absentDays||{};S.lastToday=S.lastToday||today();
-  S.sb.rev=ts;absSync=null;sbPersist();document.documentElement.dataset.th=S.theme||'light';render();}
-// سحب آخر نسخة من السحابة إن كانت أحدث من آخر مزامنة لهذا الجهاز (بدون مقاطعتك أثناء تعديل)
-async function sbPull(){const b=S.sb;if(!b.url||!b.key||!sbReady()||sbDirty)return;
-  try{const id=encodeURIComponent(b.rowId||'main'),q=c=>fetch(sbBase()+'/rest/v1/masaa_state?select='+c+'&id=eq.'+id,{headers:sbH()});
-    const r=await q('updated_at');if(!r.ok)return;const j=await r.json();
-    if(!j.length)return sbSave(true); // لا توجد نسخة بعد: ارفع المحلية
-    const ts=j[0].updated_at;if(b.rev&&new Date(ts)<=new Date(b.rev))return;
+  S.sb.rev=ts;S.sb.unsynced=false;absSync=null;sbPersist();document.documentElement.dataset.th=S.theme||'light';render();}
+// سحب آخر نسخة إن كانت أحدث من آخر مزامنة لهذا الجهاز (بدون مقاطعتك أثناء نافذة مفتوحة)
+async function sbPull(){const b=S.sb;if(!sbReady()||sbDirty)return;
+  try{const id=b.rowId||'main',m=await fbGetMeta(id);if(!m)return sbSave(true);
+    if(b.rev&&new Date(m.updated_at)<=new Date(b.rev))return;
     if($('modal').innerHTML)return;
-    const r2=await q('data'),j2=await r2.json();if(!j2.length)return;sbApply(j2[0].data,ts);toast('☁️ تم تحميل آخر نسخة من السحابة');}catch(e){}}
-async function sbBoot(){const b=S.sb;if(!b||!b.url||!b.key||!b.auto)return;
-  if(b.email&&!b.open&&!sbTok){if(!b.refresh||!(await sbRefresh())){toast('انتهت جلسة Supabase — سجّل الدخول من لوحة التحكم','warn');return;}}
-  await sbPull();setInterval(()=>{if(!document.hidden)sbPull();},60000);}
-// رابط ربط سريع: افتحه على أي جهاز فيُعدّ الاتصال تلقائياً بلا كتابة
-function sbLink(){const b=S.sb,p={u:b.url,k:b.key,e:b.email,r:b.rowId,o:b.open?1:0};
+    if(!b.rev&&hasWork()&&!confirm('توجد نسخة على السحابة (آخر تحديث '+new Date(m.updated_at).toLocaleString('ar')+'). هل تحمّلها على هذا الجهاز؟ سيُحفظ نسخة من بياناتك الحالية أولاً.')){b.rev=m.updated_at;sbPersist();return;}
+    const g=await fbGet(id);if(g){sbApply(g.data,g.updated_at);toast('☁️ تم تحميل آخر نسخة من السحابة');}}catch(e){}}
+async function sbBoot(){if(!S.sb||!sbReady()||!S.sb.auto)return;await fbAuth();await sbPull();setInterval(()=>{if(!document.hidden)sbPull();},60000);}
+async function sbLoad(){if(!sbReady())return toast('أدخل Project ID ومفتاح API أولاً','warn');
+  try{const g=await fbGet(S.sb.rowId||'main');if(!g)return toast('لا توجد نسخة محفوظة بهذا الاسم','warn');
+    if(!confirm((S.sb.unsynced?'⚠️ لديك تغييرات لم تُحفظ في السحابة وستُفقد!\n':'')+'سيتم استبدال بياناتك الحالية بنسخة Firebase المحفوظة في '+new Date(g.updated_at).toLocaleString('ar')+'. متابعة؟'))return;
+    sbApply(g.data,g.updated_at);save();toast('تم الاسترجاع من Firebase');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
+function sbLogin(){return sbSave(false);}
+function sbSync(){return sbSave(false);}
+function sbLink(){const b=S.sb,p={u:b.url,k:b.key,r:b.rowId};
   const link=location.href.split('#')[0]+'#sb='+btoa(unescape(encodeURIComponent(JSON.stringify(p))));
   (navigator.clipboard?navigator.clipboard.writeText(link).then(()=>toast('نُسخ رابط الربط — افتحه على أي جهاز')):Promise.reject()).catch(()=>prompt('انسخ هذا الرابط',link));}
 function sbHash(){try{let c=null;
-  if(location.hash.startsWith('#sb=')){const p=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(4)))));c={url:p.u,key:p.k,email:p.e||'',rowId:p.r||'main',open:!!p.o};history.replaceState(null,'',location.pathname+location.search);}
-  else if(!S.sb.url&&SB_DEFAULT.url)c={url:SB_DEFAULT.url,key:SB_DEFAULT.key,email:SB_DEFAULT.email||'',open:!SB_DEFAULT.email};
-  if(c){Object.assign(S.sb,c,{auto:true,rev:''});sbPersist();toast('تم إعداد الاتصال بـ Supabase');}}catch(e){}}
+  if(location.hash.startsWith('#sb=')){const p=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(4)))));c={url:p.u,key:p.k,rowId:p.r||'main'};history.replaceState(null,'',location.pathname+location.search);}
+  else if(!S.sb.url&&FB_DEFAULT.projectId)c={url:FB_DEFAULT.projectId,key:FB_DEFAULT.apiKey};
+  if(c){Object.assign(S.sb,c,{auto:true,rev:'',refresh:''});sbPersist();toast('تم إعداد الاتصال بـ Firebase');}}catch(e){}}
+// نسخة يومية: قبل أول حفظ في اليوم نحفظ نسخة من آخر حالة موجودة (وتُحذف النسخ الأقدم من 7 أيام)
+async function sbSnap(){const b=S.sb;if(b.bkDay===today())return;
+  try{const id=b.rowId||'main',cur=await fbGet(id);
+    if(cur&&(cur.data.teachers||[]).length){await fbPut(id+'-bk-'+today(),cur.data,new Date().toISOString());
+      const old=id+'-bk-'+new Date(Date.now()-8*864e5).toISOString().slice(0,10),j=await (await fbF('/masaa_state?pageSize=300')).json();
+      const del=(j.documents||[]).map(d=>d.name).filter(n=>{const k=decodeURIComponent(n.split('/masaa_state/')[1]).split('__p')[0];return k.startsWith(id+'-bk-')&&k<old;});
+      if(del.length)await fbF(':commit',{method:'POST',body:JSON.stringify({writes:del.map(n=>({delete:n}))})});}
+    b.bkDay=today();}catch(e){}}
+async function sbBkList(){if(!sbReady())return toast('أدخل Project ID ومفتاح API أولاً','warn');
+  try{const id=S.sb.rowId||'main',j=await (await fbF('/masaa_state?pageSize=300')).json();
+    const L=(j.documents||[]).map(d=>({id:decodeURIComponent(d.name.split('/masaa_state/')[1]),u:d.fields&&d.fields.updated_at&&d.fields.updated_at.stringValue})).filter(x=>x.id.startsWith(id+'-bk-')&&!x.id.includes('__p')).sort((a,b)=>b.id<a.id?-1:1);
+    openModal(`<h3>نسخ Firebase اليومية</h3>${L.length?L.map(x=>`<div class="pr" onclick="sbRestoreBk('${x.id}')"><div class="pn"><b>${esc(x.id.split('-bk-')[1])}</b><small>${x.u?new Date(x.u).toLocaleString('ar'):''}</small></div><span>استرجاع ↩</span></div>`).join(''):'<p>لا نسخ يومية بعد (تبدأ مع أول حفظ).</p>'}<br><button class="btn o" onclick="closeModal()">إغلاق</button>`);}catch(e){toast('فشل: '+e.message,'err');}}
+async function sbRestoreBk(id){try{const g=await fbGet(id);if(!g||!confirm('استرجاع نسخة '+id.split('-bk-')[1]+'؟ ستُحفظ بياناتك الحالية أولاً.'))return;
+  closeModal();localBackup('قبل استرجاع نسخة يومية');applyData(g.data);toast('تم الاسترجاع');}catch(e){toast('فشل: '+e.message,'err');}}
 
 /* ===== INIT ===== */
 // أخطاء "Script error." بلا رقم سطر تأتي من سكربت خارجي أو من المتصفح (مثل الترجمة التلقائية) ولا تخص المنصة؛ نتجاهل عرضها
