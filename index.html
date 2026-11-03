@@ -81,7 +81,7 @@ function load(){try{const d=localStorage.getItem(KEY);S=d?JSON.parse(d):defaults
   if(!S.cycles)S.cycles=[];S.cycle=Object.assign({name:'الدورة 1'},S.cycle);if(!S.cycle.start)S.cycle.start=today();
   if(!S.lastToday)S.lastToday=today();
   absSync=null;syncAbs();
-  S.teachers.forEach(t=>{if(!t.lockedPeriods)t.lockedPeriods=[];}); // تأمين المصفوفة للمعلمين القدامى
+  S.teachers.forEach(t=>{if(!t.lockedPeriods)t.lockedPeriods=[];});
   }catch(e){S=defaults();}}
 function save(){driveQueue();sbQueue();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('تعذّر الحفظ في المتصفح','err');}}
 
@@ -107,11 +107,11 @@ function currentPeriod(){const n=new Date(),m=n.getHours()*60+n.getMinutes();
 /* ===== ACTIONS ===== */
 function candidates(r){
   const ab=T(r.absentId),st=S.settings,p=r.period,d=r.day,em=st.emergency;
-  if(st.noP1 && p===1) return []; // القيد العام للحصة الأولى
+  if(st.noP1 && p===1) return []; 
   
   return S.teachers.filter(t=>{
     if(t.isAbsent||t.exempt||t.id==r.absentId)return false;
-    if(t.lockedPeriods && t.lockedPeriods.includes(p)) return false; // قيد إغلاق الحصة للمعلم
+    if(t.lockedPeriods && t.lockedPeriods.includes(p)) return false; 
     if(busy(t,d,p))return false;
     if(S.reserves.some(x=>x.date==r.date&&x.period==p&&x.substituteId==t.id))return false;
     if(t.balance>=limitOf(t)+(em?3:0))return false;
@@ -179,6 +179,7 @@ function setSub(i,v){const r=S.reserves[i],o=T(r.substituteId),n=v?T(v):null;
 function conflictOf(t,r){const c=[];
   if(t.isAbsent)c.push('المعلم غائب');
   if(busy(t,r.day,r.period))c.push(`لديه حصة أساسية (${t.schedule[r.day][r.period]}) في الحصة ${r.period}`);
+  if(t.lockedPeriods && t.lockedPeriods.includes(r.period))c.push(`الحصة ${r.period} مغلقة (قيد إغلاق الحصص)`);
   const ri=r.i!==undefined?r.i:S.reserves.indexOf(r);
   if(S.reserves.some((x,j)=>j!==ri&&x.date==r.date&&x.period==r.period&&x.substituteId==t.id))c.push('لديه احتياط آخر في نفس الحصة');
   return c;}
@@ -303,6 +304,7 @@ service cloud.firestore {
   <div class="card"><button class="btn" onclick="expJSON()">تصدير JSON</button><button class="btn o" onclick="$('imp').click()">استيراد JSON</button>
   <input type="file" id="imp" accept=".json" hidden onchange="impJSON(this.files[0])"><button class="btn d" onclick="resetAll()">مسح الكل</button></div>`;}
 };
+
 /* ===== المودال ===== */
 function openModal(h){$('modal').innerHTML='<div class="mb"><div class="mc">'+h+'</div></div>';$('modal').firstChild.onclick=e=>{if(e.target.className=='mb')closeModal();};}
 function closeModal(){$('modal').innerHTML='';}
@@ -311,27 +313,30 @@ const chk=(k,l)=>`<label><input type="checkbox" ${S.settings[k]?'checked':''} on
 /* ===== الجدول المدرسي ===== */
 let ttT='';
 R.tt=()=>{
-  const t=ttT?T(ttT):null,wd=dayOf(date);
+  const t=ttT?T(ttT):null;
   const rows=DAYS.map(d=>`<tr><th>${d}</th>${[1,2,3,4,5,6,7,8].map(p=>{
     const hasRes=S.reserves.some(r=>r.date==date&&r.day==d&&r.period==p&&(!t||r.substituteId==t.id));
-    let txt,cls='';
+    let txt='',cls='';
     if(t){
         const c=t.schedule[d]&&t.schedule[d][p];
         txt=c||'';
         if(c)cls='b';
         if(hasRes){cls='y';txt='احتياط';}
-        if((t.lockedPeriods||[]).includes(p)) txt = `<span style="font-size:10px;color:var(--dan)">🔒</span> ` + (txt||'+');
+        if((t.lockedPeriods||[]).includes(p)) {
+            txt = `<span style="font-size:11px;color:var(--dan)">🔒 مغلقة</span>` + (txt ? `<br><small>${txt}</small>` : '');
+            cls = 'ab';
+        }
     } else {
         const b=S.teachers.filter(x=>busy(x,d,p)).length;
         txt=b?`${b}<br><small>متفرغ ${S.teachers.length-b}</small>`:'';
         if(b)cls='b';
         if(hasRes)cls='y';
     }
-    if(p==8&&cls)cls='o8';
+    if(p==8&&cls&&cls!='ab')cls='o8';
     return `<td class="${cls}" onclick="cellModal('${d}',${p})">${txt||'+'}</td>`;}).join('')}</tr>`).join('');
   return `<div class="card"><select onchange="ttT=this.value;render()"><option value="">كل المعلمين</option>${S.teachers.map(x=>`<option value="${x.id}" ${x.id==ttT?'selected':''}>${esc(x.name)}</option>`).join('')}</select>
   <span class="tag" style="background:#b7f0c5;color:#111">أساسية</span><span class="tag" style="background:#fff3a8;color:#111">احتياط ${date}</span><span class="tag" style="background:#ffd29a;color:#111">الحصة 8</span><span class="tag" style="background:var(--surf);border:1px solid var(--dan);color:var(--dan)">🔒 مغلقة</span>
-  <p style="color:var(--mut)">اضغط أي خلية لتعديل المعلم والصف.</p>
+  <p style="color:var(--mut)">اضغط أي خلية لتعديل المعلم والصف أو إغلاق الحصة.</p>
   <button class="btn g" onclick="$('xl2').click()">📥 رفع جدول (Excel)</button><input type="file" id="xl2" accept=".xlsx,.xls,.csv" hidden onchange="impXL(this.files[0]);this.value=''"><button class="btn o" onclick="pasteSched()">📋 لصق جدول مجموعة</button><button class="btn o" onclick="tplXL()">🧾 نموذج</button></div>
   <div class="card"><table class="tt"><tr><th></th>${[1,2,3,4,5,6,7,8].map(p=>`<th>${p}</th>`).join('')}</tr>${rows}</table></div>`;};
 function cellModal(d,p){
@@ -359,7 +364,7 @@ function toggleLock(id, p, isChecked){
     }else{
         t.lockedPeriods = t.lockedPeriods.filter(x => x !== p);
     }
-    save(); render(); cellModal(T(dayOf(date))&&T(dayOf(date)).schedule?dayOf(date):DAYS[0], p);
+    save(); render(); closeModal();
 }
 
 /* ===== بحث بالصف ===== */
@@ -390,8 +395,8 @@ function tModal(id){const t=T(id);
   <label><input type="checkbox" id="m_e" ${t.exempt?'checked':''}> معفى من الاحتياط</label><br>إعفاء مؤقت من <input type="date" id="m_f" value="${t.exFrom||''}"> إلى <input type="date" id="m_x" value="${t.exTo||''}"><br>
   <label><input type="checkbox" id="m_r" ${t.lastResort?'checked':''}> آخر خيار (لا يُرشَّح إلا عند عدم وجود غيره)</label><br>
   <label>حصص ممنوعة (مثل 1,8) <input id="m_p" value="${(t.noPeriods||[]).join(',')}" style="width:100px"></label><br>
-  <label>🔒 إغلاق حصص (منع الاحتياط فيها): <br>
-    ${[1,2,3,4,5,6,7,8].map(p=>`<label style="margin-left:5px;font-size:12px"><input type="checkbox" class="m_lock" value="${p}" ${(t.lockedPeriods||[]).includes(p)?'checked':''}> حصة ${p}</label>`).join(' ')}
+  <label><b>🔒 إغلاق حصص (منع الاحتياط فيها):</b><br>
+    ${[1,2,3,4,5,6,7,8].map(p=>`<label style="margin-left:8px;font-size:13px"><input type="checkbox" class="m_lock" value="${p}" ${(t.lockedPeriods||[]).includes(p)?'checked':''}> ح${p}</label>`).join(' ')}
   </label><br>
   أيام ممنوعة: ${DAYS.map(d=>`<label><input type="checkbox" class="m_d" value="${d}" ${(t.noDays||[]).includes(d)?'checked':''}>${d}</label>`).join(' ')}<br><br>
   <button class="btn g" onclick="saveT(${id})">حفظ</button><button class="btn o" onclick="closeModal()">إغلاق</button>`);}
