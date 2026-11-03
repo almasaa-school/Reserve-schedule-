@@ -44,6 +44,8 @@ th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line);white
 #toast{position:fixed;bottom:22px;left:22px;z-index:99;display:flex;flex-direction:column;gap:8px}
 #toast div{padding:12px 18px;border-radius:14px;color:#fff;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 .mb{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:90}.mc{background:var(--surf);border-radius:22px;padding:20px;max-width:92vw;max-height:88vh;overflow:auto;min-width:290px}.tt td{text-align:center;cursor:pointer;min-width:58px;border:1px solid var(--line);line-height:1.2}.tt .b{background:#b7f0c5;color:#111}.tt .y{background:#fff3a8;color:#111}.tt .o8{background:#ffd29a;color:#111}
+.pk{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:52vh;overflow:auto}.pr{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:14px;cursor:pointer}.pr:hover{background:var(--line)}.pi{width:26px;text-align:center;font-size:18px;flex-shrink:0}.pn{flex:1;min-width:0}.pn small{display:block;color:var(--mut);font-size:12px}.pn small.c-stop{color:var(--dan)}.pn small.c-warn{color:var(--warn)}.pq{width:72px;text-align:center;border-right:1px solid var(--line);padding-right:10px;flex-shrink:0}.pq b{font-size:20px;display:block;line-height:1.1}.pq small{color:var(--mut);font-size:12px;display:block}.nt{padding:7px 12px;border-radius:10px;margin:5px 0;font-size:14px;border-right:4px solid var(--line);background:var(--line)}.nt.stop{border-color:var(--dan);background:color-mix(in srgb,var(--dan) 14%,var(--surf))}.nt.warn{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,var(--surf))}
+.pg{display:flex;flex-shrink:0;border-right:1px solid var(--line);padding-right:4px}.pg>div{width:52px;text-align:center}.pg b{font-size:17px;display:block;line-height:1.15}.pg i{font-size:11px;color:var(--mut);font-style:normal}.pg small{font-size:10.5px;color:var(--mut);display:block}
 @media(max-width:800px){#app{flex-direction:column}aside{width:100%;height:auto;position:static;display:flex;overflow-x:auto;gap:4px;padding:10px}aside h1{display:none}.nav{width:auto;white-space:nowrap}main{padding:14px}}
 </style>
 </head>
@@ -73,12 +75,13 @@ let S,page='home',date=today(),q='';
 function defaults(){return{teachers:initialTeachers(),reserves:[],
   settings:{fullQuota:25,seniorFactor:0.25,dailyLimit:2,dailyLimitSenior:1,noBetween:true,noAfter3:true,balanceLast:true,noP8Senior:false,noConsec:true,maxWeekly:0,byLoad:true,knowsClass:true,sameSubject:true,spread:true,emergency:false,p8Quota:3,maxRun:0,onlyPresent:false,excludeSubjects:'',gradeFirst:false,nearFirst:true,nearBand:20,maxGap:0},
   theme:'light',times:{1:['08:00','08:45'],2:['09:00','09:45'],3:['10:00','10:45'],4:['11:00','11:45'],5:['12:00','12:45'],6:['13:00','13:45'],7:['14:00','14:45'],8:['15:00','15:45']},
-  school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],absentDays:{},dataVer:DATA_VER,sb:{url:'',key:'',email:'',rowId:'main',auto:false,last:'',refresh:''},drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
+  school:{name:'مدرسة المسعى'},labels:{platform:'منصة المسعى'},absenceLog:[],absentDays:{},cycles:[],cycle:{name:'الدورة 1',start:''},dataVer:DATA_VER,sb:{url:'',key:'',email:'',rowId:'main',auto:false,last:'',refresh:''},drive:{clientId:'',folderId:'',fileId:'',auto:false,last:''}};}
 function load(){try{const d=localStorage.getItem(KEY);S=d?JSON.parse(d):defaults();S.settings=Object.assign({},defaults().settings,S.settings);S.drive=Object.assign({},defaults().drive,S.drive);S.sb=Object.assign({},defaults().sb,S.sb);
   // استبدال البيانات القديمة (معلمين وجداول وأرصدة واحتياط) عند تغيّر نسخة البيانات
   if(S.dataVer!==DATA_VER){S.teachers=initialTeachers();S.reserves=[];S.absenceLog=[];S.absentDays={};S.dataVer=DATA_VER;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(x){}}
   // ترحيل: الغياب أصبح مرتبطاً بتاريخ اليوم (S.absentDays) بدل علامة دائمة على المعلم
   if(!S.absentDays){S.absentDays={};const ids=S.teachers.filter(t=>t.isAbsent).map(t=>t.id),d0=(S.absenceLog||[]).map(x=>x.date).sort().pop();if(ids.length&&d0)S.absentDays[d0]=ids;}
+  if(!S.cycles)S.cycles=[];S.cycle=Object.assign({name:'الدورة 1'},S.cycle);if(!S.cycle.start)S.cycle.start=today();
   if(!S.lastToday)S.lastToday=today();
   absSync=null;syncAbs();
   }catch(e){S=defaults();}}
@@ -197,8 +200,6 @@ function warnOf(t,r){const w=[],p=r.period,d=r.day,ri=r.i!==undefined?r.i:S.rese
   let n=1,q=p-1;while(occ(q)){n++;q--;}q=p+1;while(occ(q)){n++;q++;}
   if(n>=3)w.push(`ستصبح ${n} حصص متتالية`);
   return w;}
-function rowWarn(r){const t=T(r.substituteId);if(!t)return '';const c=conflictOf(t,r),w=warnOf(t,r);
-  return (c.length?`<span class="tag" style="background:var(--dan);color:#fff" title="${esc(c.join(' | '))}">🛑 تعارض</span> `:'')+(w.length?`<span class="tag" style="background:var(--warn);color:#fff" title="${esc(w.join(' | '))}">⚠️ ${esc(w[0])}</span> `:'');}
 function delRes(i){const r=S.reserves[i],s=T(r.substituteId);if(s)s.balance=Math.max(0,s.balance-1);S.reserves.splice(i,1);save();render();}
 function todayRes(){return S.reserves.map((r,i)=>({...r,i})).filter(r=>r.date==date).sort((a,b)=>a.absentId-b.absentId||a.period-b.period);}
 
@@ -248,10 +249,11 @@ abs(){const f=S.teachers.filter(t=>(t.name+t.subject).includes(q));
   <div class="grid">${f.map(t=>`<button class="tc ${t.isAbsent?'ab':''}" onclick="toggleAbs(${t.id})">${t.isAbsent?'🚫':'✅'} ${esc(t.name)}<br><span class="tag">${esc(t.subject)}</span></button>`).join('')}</div>`;},
 dist(){const L=todayRes();
   return `<div class="card"><input type="date" value="${date}" onchange="date=this.value;render()">
-  <button class="btn g" onclick="distribute()">⚡ توزيع تلقائي</button><button class="btn" onclick="genPDF()">📄 PDF</button><button class="btn w" onclick="genPDF(true)">📎 PDF للواتساب</button><button class="btn ${S.settings.emergency?'d':'o'}" onclick="S.settings.emergency=!S.settings.emergency;save();render()">🚨 طوارئ ${S.settings.emergency?'(مفعّل)':''}</button><button class="btn w" onclick="waAll()">💬 واتساب</button><div style="color:var(--mut);font-size:13px;margin-top:6px">في قائمة البديل: 🛑 تعارض مع حصة أخرى • ⚠️ حصص متتالية أو محصورة (يُفضّل تجنبه)</div></div>
-  <div class="card">${L.length?`<table><tr><th>الغائب</th><th>الحصة</th><th>الصف</th><th>البديل</th><th></th></tr>${L.map(r=>`<tr>
+  <button class="btn g" onclick="distribute()">⚡ توزيع تلقائي</button><button class="btn" onclick="genPDF()">📄 PDF</button><button class="btn w" onclick="genPDF(true)">📎 PDF للواتساب</button><button class="btn ${S.settings.emergency?'d':'o'}" onclick="S.settings.emergency=!S.settings.emergency;save();render()">🚨 طوارئ ${S.settings.emergency?'(مفعّل)':''}</button><button class="btn w" onclick="waAll()">💬 واتساب</button><div style="color:var(--mut);font-size:13px;margin-top:6px">عند اختيار البديل: 🛑 تعارض فعلي • ⚠️ تنبيه (تتالي حصص أو نصاب أو قيد) — ولا يجتمعان، والمتبقي من النصاب ظاهر لكل معلم</div></div>
+  <div class="card">${L.length?`<table><tr><th>الغائب</th><th>الحصة</th><th>الصف</th><th>البديل</th><th>المتبقي / النصاب</th><th></th></tr>${L.map(r=>`<tr>
   <td>${esc(T(r.absentId).name)}</td><td>${r.period}${r.period==8?' ⭐':''}</td><td>${esc(r.className)}</td>
-  <td>${rowWarn(r)}<select onchange="setSub(${r.i},this.value)"><option value="">— بلا بديل —</option>${S.teachers.filter(t=>!t.isAbsent).map(t=>`<option value="${t.id}" ${t.id==r.substituteId?'selected':''}>${conflictOf(t,r).length?'🛑 ':''}${warnOf(t,r).length?'⚠️ ':''}${esc(t.name)} — ${limitOf(t)-t.balance}/${limitOf(t)}${r.period==8?' | ح8: '+(p8LimitOf(t)-p8Count(t))+'/'+p8LimitOf(t):''}</option>`).join('')}</select></td>
+  <td>${rowWarn(r)}<button class="btn o" onclick="pickSub(${r.i})">${r.substituteId?esc(T(r.substituteId).name):'— اختر بديلاً —'} ▾</button></td>
+  <td style="text-align:center">${r.substituteId?`<b>${limitOf(T(r.substituteId))-T(r.substituteId).balance}</b> / ${limitOf(T(r.substituteId))}${r.period==8?`<br><small>ح8: ${p8LimitOf(T(r.substituteId))-p8Count(T(r.substituteId))}/${p8LimitOf(T(r.substituteId))}</small>`:''}`:'—'}</td>
   <td><button class="btn w" onclick="waOne(${r.i})">💬</button><button class="btn d" onclick="delRes(${r.i})">🗑️</button></td></tr>`).join('')}</table>`
   :'<p>لا توجد حصص احتياط. سجّل غياب معلم من صفحة "الغياب" ثم اضغط "توزيع تلقائي".</p>'}</div>`;},
 teach(){const f=S.teachers.filter(t=>(t.name+t.subject).includes(q));
@@ -284,12 +286,13 @@ set(){const st=S.settings;return `<div class="card"><h3>الثيم</h3>${Object.
   أقصى عدد حصص متتالية بعد الإسناد (0 = بلا حد) <input type="number" style="width:60px" value="${st.maxRun||0}" onchange="S.settings.maxRun=+this.value;save()"><br>
   تخصصات مستثناة من الاحتياط (بفاصلة) <input value="${esc(st.excludeSubjects||'')}" onchange="S.settings.excludeSubjects=this.value;save()"><br>
   نصاب الحصة الأخيرة (8) لكل معلم <input type="number" style="width:60px" value="${st.p8Quota}" onchange="S.settings.p8Quota=+this.value;save()"><br>الحد الأسبوعي للاحتياط (0 = بلا حد) <input type="number" style="width:70px" value="${st.maxWeekly||0}" onchange="S.settings.maxWeekly=+this.value;save()"></div>
-  <div class="card"><h3>🗄️ قاعدة بيانات Supabase</h3>
+  ${cycleCard()}<div class="card"><h3>🗄️ قاعدة بيانات Supabase</h3>
   رابط المشروع <input dir="ltr" style="width:100%" placeholder="https://xxxx.supabase.co" value="${esc(S.sb.url)}" onchange="S.sb.url=this.value.trim();save()"><br><br>
   مفتاح anon (public) <input dir="ltr" style="width:100%" value="${esc(S.sb.key)}" onchange="S.sb.key=this.value.trim();save()"><br><br>
   بريد الدخول (موصى به) <input dir="ltr" value="${esc(S.sb.email)}" onchange="S.sb.email=this.value.trim();save()"> اسم السجل <input dir="ltr" style="width:90px" value="${esc(S.sb.rowId)}" onchange="S.sb.rowId=this.value.trim()||'main';save()"><br>
   <label><input type="checkbox" ${S.sb.auto?'checked':''} onchange="S.sb.auto=this.checked;save()"> حفظ تلقائي بعد كل تغيير</label><br>
-  <button class="btn g" onclick="sbLogin()">🔗 دخول وحفظ الآن</button><button class="btn o" onclick="sbLoad()">⬇️ استرجاع من Supabase</button>
+  <label><input type="checkbox" ${S.sb.open?'checked':''} onchange="S.sb.open=this.checked;save();render()"> وضع مباشر بدون تسجيل دخول (يتطلب سياسة SQL المفتوحة في الأسفل)</label><br>
+  <button class="btn g" onclick="sbLogin()">🔗 دخول وحفظ الآن</button><button class="btn o" onclick="sbLoad()">⬇️ استرجاع من Supabase</button><button class="btn o" onclick="sbLink()">🔗 نسخ رابط الربط السريع</button>
   <p style="color:var(--mut)">${S.sb.last?'آخر حفظ: '+esc(S.sb.last):'لم يُحفظ بعد'}</p>
   <details><summary>SQL لإنشاء الجدول (انسخه في SQL Editor)</summary><pre dir="ltr" style="white-space:pre-wrap;font-size:12px">create table if not exists masaa_state (
   id text primary key,
@@ -299,7 +302,12 @@ set(){const st=S.settings;return `<div class="card"><h3>الثيم</h3>${Object.
 alter table masaa_state enable row level security;
 create policy "staff_all" on masaa_state
   for all to authenticated
-  using (true) with check (true);</pre><small>ثم أنشئ مستخدماً من Authentication ← Users وضع بريده هنا. آخر من يحفظ يكتب فوق السابق.</small></details></div>
+  using (true) with check (true);
+
+-- للوضع المباشر بدون دخول (اختياري):
+create policy "open_main" on masaa_state
+  for all to anon
+  using (id = 'main') with check (id = 'main');</pre><small>ثم أنشئ مستخدماً من Authentication ← Users وضع بريده هنا. آخر من يحفظ يكتب فوق السابق.</small></details></div>
   <div class="card"><h3>☁️ Google Drive</h3>Client ID <input style="width:100%" value="${esc(S.drive.clientId)}" placeholder="xxxx.apps.googleusercontent.com" onchange="S.drive.clientId=this.value.trim();save()"><br><br>
   معرّف مجلد Drive (اختياري) <input style="width:100%" value="${esc(S.drive.folderId)}" onchange="S.drive.folderId=this.value.trim();S.drive.fileId='';save()"><br>
   <label><input type="checkbox" ${S.drive.auto?'checked':''} onchange="S.drive.auto=this.checked;save()"> حفظ تلقائي بعد كل تغيير</label><br>
@@ -526,27 +534,28 @@ const knowsGrade=(t,g)=>DAYS.some(d=>Object.values(t.schedule[d]||{}).some(c=>St
 let sbTok=null,sbTimer=null,sbWarned=false;
 const sbBase=()=>S.sb.url.replace(/\/+$/,'');
 const sbH=()=>({apikey:S.sb.key,Authorization:'Bearer '+(sbTok||S.sb.key),'Content-Type':'application/json'});
-const sbReady=()=>!!sbTok||!S.sb.email;
+const sbReady=()=>!!sbTok||!S.sb.email||S.sb.open;
 function sbPersist(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-function sbQueue(){if(!S||!S.sb||!S.sb.auto||!S.sb.url)return;clearTimeout(sbTimer);
+function sbQueue(){if(!S||!S.sb||!S.sb.auto||!S.sb.url)return;sbDirty=true;clearTimeout(sbTimer);
   sbTimer=setTimeout(()=>{if(sbReady())sbSave(true);else if(!sbWarned){sbWarned=true;toast('Supabase: سجّل الدخول من لوحة التحكم لتفعيل الحفظ التلقائي','warn');}},3000);}
 async function sbAuth(body,grant){const r=await fetch(sbBase()+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:S.sb.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
   const j=await r.json();if(!r.ok)throw new Error(j.error_description||j.msg||('HTTP '+r.status));sbTok=j.access_token;S.sb.refresh=j.refresh_token;sbPersist();sbWarned=false;}
-async function sbRefresh(){if(!S.sb.refresh)return false;try{await sbAuth({refresh_token:S.sb.refresh},'refresh_token');return true;}catch(e){S.sb.refresh='';sbTok=null;sbPersist();return false;}}
-async function sbBoot(){if(S.sb&&S.sb.auto&&S.sb.url&&S.sb.email&&S.sb.refresh&&!(await sbRefresh()))toast('انتهت جلسة Supabase — سجّل الدخول من لوحة التحكم','warn');}
+let sbRP=null;
+function sbRefresh(){return sbRP||(sbRP=_sbRefresh().finally(()=>{sbRP=null;}));}
+async function _sbRefresh(){if(!S.sb.refresh)return false;try{await sbAuth({refresh_token:S.sb.refresh},'refresh_token');return true;}catch(e){if(!(e instanceof TypeError)){S.sb.refresh='';sbPersist();}sbTok=null;return false;}}
 async function sbLogin(){const b=S.sb;if(!b.url||!b.key)return toast('أدخل رابط المشروع ومفتاح anon','err');
-  try{if(b.email){const pw=prompt('كلمة مرور '+b.email);if(!pw)return;await sbAuth({email:b.email,password:pw},'password');}await sbSave(false);}catch(e){toast('فشل الدخول: '+e.message,'err');}}
-async function sbSave(quiet,retry){try{const{sb,drive,...rest}=S; // لا نرفع مفاتيح الاتصال
-  const r=await fetch(sbBase()+'/rest/v1/masaa_state?on_conflict=id',{method:'POST',headers:{...sbH(),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:S.sb.rowId||'main',data:rest,updated_at:new Date().toISOString()})});
+  try{if(b.email&&!b.open){const pw=prompt('كلمة مرور '+b.email);if(!pw)return;await sbAuth({email:b.email,password:pw},'password');}await sbSave(false);}catch(e){toast('فشل الدخول: '+e.message,'err');}}
+async function sbSave(quiet,retry){try{const ts=new Date().toISOString();const{sb,drive,...rest}=S; // لا نرفع مفاتيح الاتصال
+  const r=await fetch(sbBase()+'/rest/v1/masaa_state?on_conflict=id',{method:'POST',headers:{...sbH(),Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({id:S.sb.rowId||'main',data:rest,updated_at:ts})});
   if(r.status==401&&!retry&&await sbRefresh())return sbSave(quiet,true);
   if(!r.ok){const t=await r.text();throw new Error('HTTP '+r.status+' '+t.slice(0,120));}
-  S.sb.last=new Date().toLocaleString('ar');sbPersist();if(!quiet){toast('🗄️ تم الحفظ في Supabase');render();}}
+  S.sb.rev=ts;sbDirty=false;S.sb.last=new Date().toLocaleString('ar');sbPersist();if(!quiet){toast('🗄️ تم الحفظ في Supabase');render();}}
   catch(e){toast('فشل الحفظ في Supabase: '+e.message,'err');}}
 async function sbLoad(){if(!sbReady())return toast('سجّل الدخول أولاً (زر "دخول وحفظ")','warn');
   try{const r=await fetch(sbBase()+'/rest/v1/masaa_state?select=data,updated_at&id=eq.'+encodeURIComponent(S.sb.rowId||'main'),{headers:sbH()});if(!r.ok)throw new Error('HTTP '+r.status);
     const j=await r.json();if(!j.length)return toast('لا توجد نسخة محفوظة بهذا الاسم','warn');
     if(!confirm('سيتم استبدال بياناتك الحالية بنسخة Supabase المحفوظة في '+new Date(j[0].updated_at).toLocaleString('ar')+'. متابعة؟'))return;
-    const sbk=S.sb,dk=S.drive;S=j[0].data;S.sb=sbk;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
+    const sbk=S.sb,dk=S.drive;S=j[0].data;S.sb=sbk;S.sb.rev=j[0].updated_at;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
     sbPersist();setTheme(S.theme||'light');toast('تم الاسترجاع من Supabase');}catch(e){toast('فشل الاسترجاع: '+e.message,'err');}}
 
 /* ===== الغياب حسب اليوم ===== */
@@ -554,10 +563,128 @@ async function sbLoad(){if(!sbReady())return toast('سجّل الدخول أول
 let absSync=null;
 function syncAbs(){if(absSync===date)return;const A=S.absentDays||(S.absentDays={}),L=A[date]||[];S.teachers.forEach(t=>{t.isAbsent=L.includes(t.id);});absSync=date;}
 function rollDay(){const td=today();if(S.lastToday!==td){S.lastToday=td;date=td;}}
+/* ===== اختيار البديل اليدوي: ملاحظات القيود + نافذة اختيار منظمة ===== */
+// أنواع الملاحظات: stop = تعارض فعلي، warn = مخالفة قيد/تتالي، info = معلومة
+function notesOf(t,r){const n=[],st=S.settings,ri=r.i!==undefined?r.i:S.reserves.indexOf(r),p=r.period,lim=limitOf(t);
+  conflictOf(t,r).forEach(x=>n.push({k:'stop',t:x}));
+  warnOf(t,r).forEach(x=>n.push({k:'warn',t:x}));
+  const after=t.balance+(r.substituteId==t.id?0:1);
+  if(after>lim)n.push({k:'warn',t:`سيتجاوز نصابه: ${after} من ${lim}`});
+  else if(after==lim)n.push({k:'info',t:`سيبلغ نصابه الكامل (${after}/${lim})`});
+  else if(lim&&after/lim>=0.8)n.push({k:'info',t:`نصابه مرتفع: ${after} من ${lim} (${Math.round(after/lim*100)}%)`});
+  if(p==8){const l8=p8LimitOf(t),u8=p8Count(t)+(r.substituteId==t.id?0:1);if(u8>l8)n.push({k:'warn',t:`سيتجاوز نصاب الحصة 8: ${u8} من ${l8}`});else if(u8==l8)n.push({k:'info',t:`سيبلغ نصاب الحصة 8 (${u8}/${l8})`});}
+  const dl=t.type=='معلم أول'?st.dailyLimitSenior:st.dailyLimit;
+  if(S.reserves.filter((x,j)=>j!==ri&&x.date==r.date&&x.substituteId==t.id).length>=dl)n.push({k:'warn',t:`بلغ الحد اليومي للاحتياط (${dl})`});
+  if(t.exempt)n.push({k:'warn',t:'معفى من الاحتياط'});
+  if(t.exFrom&&r.date>=t.exFrom&&r.date<=(t.exTo||t.exFrom))n.push({k:'warn',t:`معفى مؤقتاً (${t.exFrom} إلى ${t.exTo||t.exFrom})`});
+  if((t.noPeriods||[]).includes(p))n.push({k:'warn',t:`الحصة ${p} ممنوعة عليه`});
+  if((t.noDays||[]).includes(r.day))n.push({k:'warn',t:`يوم ${r.day} ممنوع عليه`});
+  if(t.lastResort)n.push({k:'info',t:'مصنّف "آخر خيار"'});
+  const g=gapOf(t,r);if(g==9)n.push({k:'info',t:'ليس لديه حصص أخرى في هذا اليوم'});else if(g>=4)n.push({k:'info',t:`بعيدة عن جدوله (أقرب حصة له على بُعد ${g})`});
+  return n;}
+// رمز واحد فقط: 🛑 للتعارض ويتقدم على ⚠️ للتنبيه، ولا يجتمعان
+const iconOf=n=>n.some(x=>x.k=='stop')?'🛑':n.some(x=>x.k=='warn')?'⚠️':'';
+function rowWarn(r){const t=T(r.substituteId);if(!t)return '';const n=notesOf(t,r).filter(x=>x.k!='info'),ic=iconOf(n);if(!ic)return '';
+  const f=n.find(x=>x.k=='stop')||n[0];
+  return `<span class="tag" style="background:${ic=='🛑'?'var(--dan)':'var(--warn)'};color:#fff" title="${esc(n.map(x=>x.t).join(' | '))}">${ic} ${esc(f.t)}</span> `;}
+let pickI=-1,pickQ='';
+function pickSub(i){pickI=i;pickQ='';drawPick();}
+function drawPick(keep){const r=S.reserves[pickI];if(!r)return;const cand=candidates(r).map(t=>t.id);
+  const rows=S.teachers.filter(t=>!t.isAbsent&&t.id!=r.absentId&&(t.name+t.subject).includes(pickQ)).map(t=>{const n=notesOf(t,r);return{t,n,ic:iconOf(n)};})
+    .map(x=>{x.ci=cand.indexOf(x.t.id);x.bad=x.n.filter(y=>y.k!='info').length;x.g=x.ci>=0?0:x.n.some(y=>y.k=='stop')?3:x.bad?2:1;return x;})
+    .sort((a,b)=>a.g-b.g||(a.g==0?a.ci-b.ci:a.bad-b.bad||(a.t.balance/limitOf(a.t))-(b.t.balance/limitOf(b.t))));
+  openModal(`<h3>اختيار بديل — الحصة ${r.period} (${esc(r.className)})</h3><div style="color:var(--mut)">الغائب: ${esc(T(r.absentId).name)}</div>
+  <input id="pq" placeholder="🔍 بحث بالاسم أو التخصص" value="${esc(pickQ)}" oninput="pickQ=this.value;drawPick(true)" style="width:100%;margin:8px 0">
+  <div class="pk">${rows.map(({t,n,ic})=>{const top=n.filter(x=>x.k!='info').concat(n.filter(x=>x.k=='info')).slice(0,2);
+    return `<div class="pr" onclick="pickChoose(${t.id})"><span class="pi">${ic||''}</span>
+    <div class="pn"><b>${esc(t.name)}${t.id==r.substituteId?' ✓':''}</b><small>${esc(t.subject)}</small>${top.map(x=>`<small class="c-${x.k}">${esc(x.t)}</small>`).join('')}</div>
+    <div class="pg"><div><b>${baseCount(t)}</b><small>حصصه</small></div><div><b>${limitOf(t)-t.balance}<i>/${limitOf(t)}</i></b><small>احتياط</small></div><div><b>${p8LimitOf(t)-p8Count(t)}<i>/${p8LimitOf(t)}</i></b><small>الأخيرة</small></div></div></div>`;}).join('')||'<p>لا نتائج</p>'}</div>
+  <button class="btn o" onclick="applySub(${pickI},'')">بلا بديل</button><button class="btn o" onclick="closeModal()">إغلاق</button>`);
+  if(keep){const e=$('pq');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}}}
+const p8Line=(t,r)=>r.period==8?`<small>ح8: ${p8LimitOf(t)-p8Count(t)}/${p8LimitOf(t)}</small>`:'';
+function pickChoose(id){const t=T(id),r=S.reserves[pickI],n=notesOf(t,r),reg=regOf(t);
+  if(!n.length&&!reg.length)return applySub(pickI,id);
+  const stop=n.some(x=>x.k=='stop'),ic=iconOf(n);
+  openModal(`<h3>${ic} ${esc(t.name)}</h3><div style="color:var(--mut)">${esc(t.subject)} — الحصة ${r.period} (${esc(r.className)})</div>
+  <div class="pg" style="border:0;padding:8px 0;justify-content:center;gap:10px"><div><b>${baseCount(t)}</b><small>حصصه الفعلية</small></div><div><b>${t.balance}<i>/${limitOf(t)}</i></b><small>نصاب الاحتياط</small></div><div><b>${p8Count(t)}<i>/${p8LimitOf(t)}</i></b><small>نصاب الأخيرة</small></div></div>
+  ${reg.length?`<b>القيود المسجلة له:</b>${reg.map(x=>`<div class="nt">${esc(x)}</div>`).join('')}`:''}
+  ${n.length?`<b>ملاحظات هذه الحصة:</b>${n.map(x=>`<div class="nt ${x.k}">${esc(x.t)}</div>`).join('')}`:''}<br>
+  <button class="btn ${stop?'d':'g'}" onclick="applySub(${pickI},${id})">${stop?'تعيين رغم التعارض':'تعيين'}</button><button class="btn o" onclick="drawPick()">رجوع</button>`);}
+function applySub(i,id){const r=S.reserves[i],o=T(r.substituteId),n=id?T(id):null;
+  if(o)o.balance=Math.max(0,o.balance-1);if(n)n.balance++;r.substituteId=n?n.id:null;save();closeModal();render();toast(n?'تم تعيين '+n.name:'أُزيل البديل');}
+
+/* ===== الإحصائيات الدقيقة + الدورات + القيود المسجلة ===== */
+function statRows(){return S.teachers.map(t=>{const lim=limitOf(t),l8=p8LimitOf(t),took=t.balance,p8=p8Count(t),mine=S.reserves.filter(r=>r.absentId==t.id);
+  return{name:t.name,subject:t.subject,load:baseCount(t),abs:absCount(t),cov:mine.length,covA:mine.filter(r=>r.substituteId).length,took,lim,pct:lim?Math.round(took/lim*100):0,p8,l8,p8pct:l8?Math.round(p8/l8*100):0,id:t.id};});}
+const bar=p=>`<span style="color:${p>=100?'var(--dan)':p>=80?'var(--warn)':'var(--txt)'};font-weight:600">${p}%</span>`;
+function statTable(rows,edit){const sum=k=>rows.reduce((a,x)=>a+x[k],0);
+  const th=['الاسم','التخصص','الحصص الفعلية','أيام الغياب','حصص غيابه','الموزعة منها','الاحتياط','نصاب الاحتياط','النسبة','الحصة الأخيرة','نصابها','النسبة'];
+  return `<table><tr>${th.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.subject)}</td><td>${x.load}</td><td>${x.abs}</td><td>${x.cov}</td><td>${x.covA}</td><td><b>${x.took}</b></td>
+  <td>${edit?`<input type="number" style="width:56px" value="${x.lim}" onchange="setLimit(${x.id},this.value)">`:x.lim}</td><td>${bar(x.pct)}</td><td><b>${x.p8}</b></td>
+  <td>${edit?`<input type="number" style="width:50px" value="${x.l8}" onchange="setP8(${x.id},this.value)">`:x.l8}</td><td>${bar(x.p8pct)}</td></tr>`).join('')}
+  <tr style="font-weight:800"><td>الإجمالي</td><td></td><td>${sum('load')}</td><td>${sum('abs')}</td><td>${sum('cov')}</td><td>${sum('covA')}</td><td>${sum('took')}</td><td>${sum('lim')}</td><td></td><td>${sum('p8')}</td><td>${sum('l8')}</td><td></td></tr></table>`;}
+R.stats=()=>`<div class="card"><b>${esc(S.cycle.name)}</b> — منذ ${esc(S.cycle.start)} <button class="btn o" onclick="xlStats(statRows(),S.cycle.name)">📊 Excel</button>
+  <br><small style="color:var(--mut)">الحصص الفعلية = حصصه الأساسية أسبوعياً • حصص غيابه = حصص الاحتياط التي نشأت بسبب غيابه • الأنصبة وبدء دورة جديدة من لوحة التحكم</small></div>
+  <div class="card">${statTable(statRows().sort((a,b)=>b.took-a.took),true)}</div>`;
+function xlStats(rows,name){if(typeof XLSX=='undefined')return toast('مكتبة Excel لم تُحمَّل','err');
+  const h=['الاسم','التخصص','الحصص الفعلية','أيام الغياب','حصص غيابه','الموزعة منها','الاحتياط','نصاب الاحتياط','نسبة الاحتياط %','الحصة الأخيرة','نصاب الحصة الأخيرة','نسبتها %'];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([h,...rows.map(x=>[x.name,x.subject,x.load,x.abs,x.cov,x.covA,x.took,x.lim,x.pct,x.p8,x.l8,x.p8pct])]),'الإحصائيات');XLSX.writeFile(wb,'إحصائيات_'+name+'.xlsx');}
+// الدورات: حفظ الدورة الحالية ثم تصفير الأرصدة والسجلات
+function cycleCard(){const cs=S.cycles||[],c=S.cycle||{};
+  return `<div class="card"><h3>⚖️ الأنصبة والدورات</h3><p>الدورة الحالية: <b>${esc(c.name||'')}</b> — منذ ${esc(c.start||'')}</p>
+  <button class="btn g" onclick="autoQuota()">⚖️ توزيع الأنصبة حسب الأقل حصصاً</button><button class="btn o" onclick="resetQuota()">↩️ الأنصبة الافتراضية</button><button class="btn" onclick="newCycle()">🔄 بدء دورة جديدة</button>
+  <p style="color:var(--mut)">الأقل حصصاً أساسية يأخذ نصاب احتياط أكبر. وبدء دورة جديدة يحفظ إحصائيات الدورة الحالية ثم يصفّر الأرصدة وسجل الاحتياط والغياب.</p>
+  ${cs.length?`<table><tr><th>الدورة</th><th>الفترة</th><th>الحصص</th><th></th></tr>${cs.map((x,i)=>`<tr><td>${esc(x.name)}</td><td>${esc(x.start)} ← ${esc(x.end)}</td><td>${x.total}</td><td><button class="btn o" onclick="viewCycle(${i})">عرض</button><button class="btn d" onclick="delCycle(${i})">حذف</button></td></tr>`).join('')}</table>`:'<small style="color:var(--mut)">لا توجد دورات سابقة محفوظة</small>'}</div>`;}
+function newCycle(){if(!S.cycles)S.cycles=[];
+  if(!confirm('سيتم حفظ إحصائيات الدورة الحالية ثم تصفير الأرصدة وسجل الاحتياط والغياب. متابعة؟'))return;
+  const nm=(prompt('اسم الدورة الجديدة',`الدورة ${S.cycles.length+2}`)||'').trim()||`الدورة ${S.cycles.length+2}`;
+  S.cycles.push({name:S.cycle.name,start:S.cycle.start,end:today(),rows:statRows(),total:S.reserves.length,reserves:S.reserves,absenceLog:S.absenceLog});
+  S.teachers.forEach(t=>t.balance=0);S.reserves=[];S.absenceLog=[];S.cycle={name:nm,start:today()};save();render();toast('بدأت '+nm+' — حُفظت الدورة السابقة');}
+function viewCycle(i){const c=S.cycles[i];openModal(`<h3>${esc(c.name)}</h3><div style="color:var(--mut)">${esc(c.start)} ← ${esc(c.end)}</div>${statTable(c.rows)}<br>
+  <button class="btn o" onclick="xlStats(S.cycles[${i}].rows,S.cycles[${i}].name)">📊 Excel</button><button class="btn o" onclick="closeModal()">إغلاق</button>`);}
+function delCycle(i){if(confirm('حذف هذه الدورة المحفوظة نهائياً؟')){S.cycles.splice(i,1);save();render();}}
+// القيود المسجلة على المعلم (تُعرض في نافذة التأكيد حتى لو لم تُخالَف)
+function regOf(t){const g=[],st=S.settings;
+  if(t.type=='معلم أول')g.push(`معلم أول: الحد اليومي ${st.dailyLimitSenior}`);
+  if(t.customLimit!=null)g.push(`سقف احتياط مخصص: ${t.customLimit}`);
+  if(t.p8Limit!=null)g.push(`سقف الحصة الأخيرة مخصص: ${t.p8Limit}`);
+  if(t.exempt)g.push('معفى من الاحتياط');
+  if(t.exFrom)g.push(`إعفاء مؤقت: ${t.exFrom} إلى ${t.exTo||t.exFrom}`);
+  if((t.noPeriods||[]).length)g.push('حصص ممنوعة: '+t.noPeriods.join('، '));
+  if((t.noDays||[]).length)g.push('أيام ممنوعة: '+t.noDays.join('، '));
+  if(t.lastResort)g.push('آخر خيار');
+  return g;}
+/* ===== Supabase: اتصال مباشر ومزامنة تلقائية ===== */
+// يمكنك لصق بيانات مشروعك هنا مرة واحدة ليتصل كل جهاز تلقائياً بدون أي إدخال (مفتاح anon عام بطبيعته):
+const SB_DEFAULT={url:'',key:'',email:''};
+let sbDirty=false;
+function sbApply(d,ts){const sbk=S.sb,dk=S.drive;S=d;S.sb=sbk;S.drive=Object.assign({},defaults().drive,dk);S.settings=Object.assign({},defaults().settings,S.settings);
+  S.cycles=S.cycles||[];S.cycle=Object.assign({name:'الدورة 1',start:today()},S.cycle);S.absentDays=S.absentDays||{};S.lastToday=S.lastToday||today();
+  S.sb.rev=ts;absSync=null;sbPersist();document.documentElement.dataset.th=S.theme||'light';render();}
+// سحب آخر نسخة من السحابة إن كانت أحدث من آخر مزامنة لهذا الجهاز (بدون مقاطعتك أثناء تعديل)
+async function sbPull(){const b=S.sb;if(!b.url||!b.key||!sbReady()||sbDirty)return;
+  try{const id=encodeURIComponent(b.rowId||'main'),q=c=>fetch(sbBase()+'/rest/v1/masaa_state?select='+c+'&id=eq.'+id,{headers:sbH()});
+    const r=await q('updated_at');if(!r.ok)return;const j=await r.json();
+    if(!j.length)return sbSave(true); // لا توجد نسخة بعد: ارفع المحلية
+    const ts=j[0].updated_at;if(b.rev&&new Date(ts)<=new Date(b.rev))return;
+    if($('modal').innerHTML)return;
+    const r2=await q('data'),j2=await r2.json();if(!j2.length)return;sbApply(j2[0].data,ts);toast('☁️ تم تحميل آخر نسخة من السحابة');}catch(e){}}
+async function sbBoot(){const b=S.sb;if(!b||!b.url||!b.key||!b.auto)return;
+  if(b.email&&!b.open&&!sbTok){if(!b.refresh||!(await sbRefresh())){toast('انتهت جلسة Supabase — سجّل الدخول من لوحة التحكم','warn');return;}}
+  await sbPull();setInterval(()=>{if(!document.hidden)sbPull();},60000);}
+// رابط ربط سريع: افتحه على أي جهاز فيُعدّ الاتصال تلقائياً بلا كتابة
+function sbLink(){const b=S.sb,p={u:b.url,k:b.key,e:b.email,r:b.rowId,o:b.open?1:0};
+  const link=location.href.split('#')[0]+'#sb='+btoa(unescape(encodeURIComponent(JSON.stringify(p))));
+  (navigator.clipboard?navigator.clipboard.writeText(link).then(()=>toast('نُسخ رابط الربط — افتحه على أي جهاز')):Promise.reject()).catch(()=>prompt('انسخ هذا الرابط',link));}
+function sbHash(){try{let c=null;
+  if(location.hash.startsWith('#sb=')){const p=JSON.parse(decodeURIComponent(escape(atob(location.hash.slice(4)))));c={url:p.u,key:p.k,email:p.e||'',rowId:p.r||'main',open:!!p.o};history.replaceState(null,'',location.pathname+location.search);}
+  else if(!S.sb.url&&SB_DEFAULT.url)c={url:SB_DEFAULT.url,key:SB_DEFAULT.key,email:SB_DEFAULT.email||'',open:!SB_DEFAULT.email};
+  if(c){Object.assign(S.sb,c,{auto:true,rev:''});sbPersist();toast('تم إعداد الاتصال بـ Supabase');}}catch(e){}}
+
 /* ===== INIT ===== */
 // أخطاء "Script error." بلا رقم سطر تأتي من سكربت خارجي أو من المتصفح (مثل الترجمة التلقائية) ولا تخص المنصة؛ نتجاهل عرضها
 window.onerror=(m,s,l)=>{if(/^Script error/i.test(String(m))&&!l){console.warn('تم تجاهل خطأ خارجي:',m);return true;}toast('خطأ: '+m+' (سطر '+l+')','err');};
-try{load();clsP=currentPeriod()||1;document.documentElement.dataset.th=S.theme||'light';render();sbBoot();}
+try{load();clsP=currentPeriod()||1;document.documentElement.dataset.th=S.theme||'light';render();sbHash();sbBoot();}
 catch(e){document.body.innerHTML='<div style="padding:30px;font-family:sans-serif">تعذّر تشغيل المنصة: '+e.message+'</div>';}
 </script>
 </body>
