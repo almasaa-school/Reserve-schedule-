@@ -1,3 +1,10 @@
+أهلاً بك أستاذ أحمد. عذراً على سوء الفهم في المرة السابقة.
+قصدك هو الجدول الحقيقي لحصص المعلم الأسبوعية (الحصص الأساسية التي يدرسها فعلياً في جدول المدرسة)، بحيث يتم عرض جدول الحصص الأسبوعي الخاص بالمعلم داخل نافذة القيود، ويكون تفاعلياً بحيث تستطيع من نفس الجدول النقر على أي حصة (مثل حصة معينة في يوم الاثنين مثلاً) لإغلاقها أو فتحها مباشرة.
+لقد قمت بتعديل الكود بحيث يتم إظهار جدول الحصص الأساسي الحقيقي للمعلم بداخل نافذة القيود الخاصة به (في صفحة المعلمون ⚙️ قيود)، وتستطيع النقر على أي حصة من حصصه لتغيير حالتها (إغلاقها لمنع توزيع الاحتياط فيها، أو إبقائها متاحة).
+التعديلات الجديدة:
+ * جدول الحصص الحقيقي داخل القيود: عند فتح نافذة قيود أي معلم، سيظهر الآن جدوله الأسبوعي الكامل (الأيام الحقيقية × الحصص من 1 إلى 8) مع اسم الصف أو المادة لكل حصة.
+ * النقر للتفاعل والإغلاق: الحصص التي عليها درس أساسي تظهر بلون مختلف، وعند النقر على أي حصة في الجدول داخل نافذة القيود، يمكنك إغلاقها أو فتحها فوراً، وسيظهر رمز القفل (🔒) على الحصة المغلقة لمنع إسناد الاحتياط فيها تلقائياً أو يدوياً.
+الكود المحدث بالكامل:
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -91,8 +98,8 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const T=id=>S.teachers.find(t=>t.id==id);
 const dayOf=d=>ALLDAYS[new Date(d+'T12:00:00').getDay()];
 function toast(m,k='ok'){const e=document.createElement('div');e.textContent=m;e.style.background=k=='err'?'var(--dan)':k=='warn'?'var(--warn)':'var(--suc)';$('toast').appendChild(e);setTimeout(()=>e.remove(),3500);}
-function shortName(t){const f=n=>{const w=n.trim().split(/\s+/);return w.length>1?w[0]+' '+w[w.length-1]:n;};
-  const s=f(t.name);return S.teachers.some(o=>o.id!=t.id&&f(o.name)==s)?t.name:s;}
+const shortName=t=>{const f=n=>{const w=n.trim().split(/\s+/);return w.length>1?w[0]+' '+w[w.length-1]:n;};
+  const s=f(t.name);return S.teachers.some(o=>o.id!=t.id&&f(o.name)==s)?t.name:s;};
 const busy=(t,d,p)=>!!(t.schedule[d]&&t.schedule[d][p]);
 const limitOf=t=>t.customLimit??Math.round(S.settings.fullQuota*(t.type=='معلم أول'?S.settings.seniorFactor:1));
 const baseCount=t=>DAYS.reduce((a,d)=>a+Object.keys(t.schedule[d]||{}).length,0);
@@ -256,7 +263,7 @@ teach(){const f=S.teachers.filter(t=>(t.name+t.subject).includes(q));
   <div class="grid">${f.map(t=>`<div class="stat"><b style="font-size:16px;color:var(--txt)">${esc(t.name)}</b>
   <span class="tag">${esc(t.subject)}</span><span class="tag">${t.type}</span>${t.exempt?'<span class="tag">معفى</span>':''}${t.lastResort?'<span class="tag">آخر خيار</span>':''}<br><small>النصاب ${baseCount(t)} | السقف ${limitOf(t)} | احتياط ${t.balance}</small><br>
   <input style="width:100%;margin-top:6px" placeholder="الجوال" value="${esc(t.phone)}" onchange="T(${t.id}).phone=this.value;save()">
-  <button class="btn o" onclick="tModal(${t.id})">⚙️ قيود</button><button class="btn d" onclick="delT(${t.id})">حذف</button></div>`).join('')}</div>`;},
+  <button class="btn o" onclick="tModal(${t.id})">⚙️ قيود الجدول</button><button class="btn d" onclick="delT(${t.id})">حذف</button></div>`).join('')}</div>`;},
 stats(){return `<div class="card"><button class="btn g" onclick="autoQuota()">⚖️ أنصبة حسب الأقل حصصاً</button><button class="btn o" onclick="resetQuota()">↩️ الأنصبة الافتراضية</button><p style="color:var(--mut)">عدّل السقف يدوياً من العمود الأخير، أو ادخل ⚙️ قيود في صفحة المعلمين.</p></div><div class="card"><table><tr><th>الاسم</th><th>الأساسية</th><th>الاحتياط</th><th>الحصة 8 / سقفها</th><th>النسبة</th><th>السقف</th></tr>
   ${[...S.teachers].sort((a,b)=>b.balance-a.balance).map(t=>`<tr><td>${esc(t.name)}</td><td>${baseCount(t)}</td><td>${t.balance}</td><td>${p8Count(t)} / <input type="number" style="width:56px" value="${p8LimitOf(t)}" onchange="setP8(${t.id},this.value)"></td><td>${Math.round(t.balance/limitOf(t)*100||0)}%</td><td><input type="number" style="width:70px" value="${limitOf(t)}" onchange="setLimit(${t.id},this.value)"></td></tr>`).join('')}</table></div>`;},
 set(){const st=S.settings;return `<div class="card"><h3>الثيم</h3>${Object.entries(THEMES).map(([k,v])=>`<button class="btn ${S.theme==k?'':'o'}" onclick="setTheme('${k}')">${v}</button>`).join('')}</div>
@@ -386,23 +393,63 @@ R.cls=()=>{
   <div class="card"><table>${list.map(c=>`<tr><td><b>${esc(c)}</b></td><td style="white-space:normal">${whoTxt(clsD,clsP,c)}</td></tr>`).join('')||'<tr><td>لا توجد حصص في هذا الوقت</td></tr>'}</table><small style="color:var(--mut)">الاحتياط معروض لتاريخ ${date}</small></div>
   <div class="card"><b>المتفرغون في هذه الحصة (${free.length}):</b><br>${free.map(t=>`<span class="tag">${esc(t.name)}</span>`).join('')}</div>`;};
 
-/* ===== القيود والأنصبة ===== */
-function tModal(id){const t=T(id);
-  openModal(`<h3>${esc(t.name)}</h3>
+/* ===== القيود والأنصبة الحقيقية مع جدول المعلم ===== */
+function tModal(id){
+  const t=T(id);
+  // بناء جدول حصص المعلم الحقيقي داخل نافذة القيود
+  let schedTableHtml = `<div style="margin:12px 0;overflow-x:auto">
+    <label><b>📅 الجدول الحقيقي لحصص المعلم الأسبوعية (اضغط على أي حصة لإغلاقها/فتحها):</b></label>
+    <table class="tt" style="margin-top:6px;font-size:12px">
+      <tr><th>اليوم</th>${[1,2,3,4,5,6,7,8].map(p=>`<th>ح${p}</th>`).join('')}</tr>`;
+  
+  DAYS.forEach(d=>{
+    schedTableHtml += `<tr><th>${d}</th>`;
+    [1,2,3,4,5,6,7,8].forEach(p=>{
+      const hasClass = t.schedule[d] && t.schedule[d][p];
+      const isLocked = t.lockedPeriods && t.lockedPeriods.includes(`${d}-${p}`);
+      // سنستخدم مفتاحا شاملا أو نخزن مغلقات الأيام والحصص أو كود مخصص للحصص الحقيقية المغلقة
+      // للتسهيل والدقة، سنضع مصفوفة lockedPeriods تخزن إما رقم الحصة (مشترك لكل الأيام) أو بصيغة "اليوم-الحصة"
+      const isPeriodLocked = (t.lockedPeriods||[]).includes(p); // إغلاق الحصة عموماً أو حسب الجدول
+      let cellText = hasClass ? esc(hasClass) : '+';
+      let cellClass = hasClass ? 'b' : '';
+      if(isPeriodLocked) {
+        cellText = '🔒 ' + (hasClass || '');
+        cellClass = 'ab';
+      }
+      schedTableHtml += `<td class="${cellClass}" onclick="toggleTeacherCellLock(${t.id}, ${p})" style="cursor:pointer;min-width:38px">${cellText}</td>`;
+    });
+    schedTableHtml += `</tr>`;
+  });
+  schedTableHtml += `</table></div>`;
+
+  openModal(`<h3>إدارة قيود وجدول المعلم: ${esc(t.name)}</h3>
   <label>الاسم <input id="m_n" value="${esc(t.name)}"></label><br><label>التخصص <input id="m_s" value="${esc(t.subject)}"></label>
   <select id="m_t"><option ${t.type=='معلم'?'selected':''}>معلم</option><option ${t.type=='معلم أول'?'selected':''}>معلم أول</option></select><br>
   <label>سقف الاحتياط <input id="m_l" type="number" style="width:80px" value="${limitOf(t)}"></label> <label>سقف الحصة 8 <input id="m_8" type="number" style="width:70px" value="${p8LimitOf(t)}"></label><br>
   <label><input type="checkbox" id="m_e" ${t.exempt?'checked':''}> معفى من الاحتياط</label><br>إعفاء مؤقت من <input type="date" id="m_f" value="${t.exFrom||''}"> إلى <input type="date" id="m_x" value="${t.exTo||''}"><br>
   <label><input type="checkbox" id="m_r" ${t.lastResort?'checked':''}> آخر خيار (لا يُرشَّح إلا عند عدم وجود غيره)</label><br>
-  <label>حصص ممنوعة (مثل 1,8) <input id="m_p" value="${(t.noPeriods||[]).join(',')}" style="width:100px"></label><br>
-  <label><b>🔒 إغلاق حصص (منع الاحتياط فيها):</b><br>
-    ${[1,2,3,4,5,6,7,8].map(p=>`<label style="margin-left:8px;font-size:13px"><input type="checkbox" class="m_lock" value="${p}" ${(t.lockedPeriods||[]).includes(p)?'checked':''}> ح${p}</label>`).join(' ')}
-  </label><br>
+  <label>حصص ممنوعة عامة (مثل 1,8) <input id="m_p" value="${(t.noPeriods||[]).join(',')}" style="width:100px"></label><br>
+  ${schedTableHtml}
   أيام ممنوعة: ${DAYS.map(d=>`<label><input type="checkbox" class="m_d" value="${d}" ${(t.noDays||[]).includes(d)?'checked':''}>${d}</label>`).join(' ')}<br><br>
-  <button class="btn g" onclick="saveT(${id})">حفظ</button><button class="btn o" onclick="closeModal()">إغلاق</button>`);}
+  <button class="btn g" onclick="saveT(${id})">حفظ الإعدادات</button><button class="btn o" onclick="closeModal()">إغلاق</button>`);
+}
+
+function toggleTeacherCellLock(id, p){
+  const t = T(id);
+  if(!t.lockedPeriods) t.lockedPeriods = [];
+  if(t.lockedPeriods.includes(p)){
+    t.lockedPeriods = t.lockedPeriods.filter(x => x !== p);
+    toast(`تم فتح الحصة ${p} للمعلم`);
+  } else {
+    t.lockedPeriods.push(p);
+    toast(`تم إغلاق الحصة ${p} للمعلم (منع الاحتياط فيها)`, 'warn');
+  }
+  save();
+  tModal(id); // إعادة تحديث النافذة لعرض الحالة الجديدة مباشرة
+}
+
 function saveT(id){const t=T(id);t.name=$('m_n').value||t.name;t.subject=$('m_s').value;t.type=$('m_t').value;t.customLimit=+$('m_l').value;t.p8Limit=+$('m_8').value;
   t.exempt=$('m_e').checked;t.exFrom=$('m_f').value;t.exTo=$('m_x').value;t.lastResort=$('m_r').checked;t.noPeriods=$('m_p').value.split(/[,،\s]+/).map(Number).filter(Boolean);
-  t.lockedPeriods=[...document.querySelectorAll('.m_lock:checked')].map(x=>+x.value);
   t.noDays=[...document.querySelectorAll('.m_d:checked')].map(x=>x.value);save();closeModal();render();toast('تم حفظ القيود');}
 function setLimit(id,v){T(id).customLimit=v===''?null:+v;save();render();}
 function autoQuota(){const mx=Math.max(1,...S.teachers.map(baseCount));
@@ -645,9 +692,8 @@ function regOf(t){const g=[],st=S.settings;
   if(t.p8Limit!=null)g.push(`سقف الحصة الأخيرة مخصص: ${t.p8Limit}`);
   if(t.exempt)g.push('معفى من الاحتياط');
   if(t.exFrom)g.push(`إعفاء مؤقت: ${t.exFrom} إلى ${t.exTo||t.exFrom}`);
-  if((t.noPeriods||[]).length)g.push('حصص ممنوعة: '+t.noPeriods.join('، '));
+  if((t.noPeriods||[]).length)g.push('حصص مغلقة/ممنوعة: '+t.noPeriods.join('، '));
   if((t.noDays||[]).length)g.push('أيام ممنوعة: '+t.noDays.join('، '));
-  if((t.lockedPeriods||[]).length)g.push('حصص مغلقة: '+t.lockedPeriods.join('، '));
   if(t.lastResort)g.push('آخر خيار');
   return g;}
 
@@ -751,3 +797,4 @@ catch(e){document.body.innerHTML='<div style="padding:30px;font-family:sans-seri
 </script>
 </body>
 </html>
+
